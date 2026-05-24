@@ -19,7 +19,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" ",
+    "prepare": "husky"
   },
   "dependencies": {
     "express": "^5.2.1"
@@ -27,6 +28,7 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^25.9.1",
+    "husky": "^9.1.7",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3"
   }
