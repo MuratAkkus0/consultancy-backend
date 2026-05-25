@@ -3,6 +3,9 @@ dist
 personal_docs
 node_modules
 
+# Vitest
+coverage
+
 .env*
 !.env.example
 
