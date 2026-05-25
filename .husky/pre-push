@@ -4,6 +4,9 @@ set -e
 echo "🧠 Type-checking..."
 npm run typecheck
 
+echo "🧹 Linting..."
+npm run lint
+
 echo "🧪 Running tests..."
 npm test
 
