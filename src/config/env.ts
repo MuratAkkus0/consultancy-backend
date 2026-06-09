@@ -13,8 +13,6 @@ const EnvSchema = z.object({
 
   // DATABASE_URL — Postgres connection string
   DATABASE_URL: z.url(),
-  POSTGRES_PASSWORD: z.string().min(12),
-  POSTGRES_DB: z.string(),
 
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 chars"),
 
@@ -23,7 +21,15 @@ const EnvSchema = z.object({
   JWT_EXPIRES_IN: z.string().default("15m"),
   JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
 
-  ALLOWED_ORIGIN: z.url(),
+  ALLOWED_ORIGINS: z
+    .string()
+    .transform((s) =>
+      s
+        .split(",")
+        .map((o) => o.trim())
+        .filter(Boolean),
+    )
+    .pipe(z.array(z.url()).min(1)),
 
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace"])

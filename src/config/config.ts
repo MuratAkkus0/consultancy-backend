@@ -9,7 +9,7 @@ export const config = {
   server: {
     port: env.APP_PORT,
     cors: {
-      origin: env.ALLOWED_ORIGIN,
+      origin: env.ALLOWED_ORIGINS,
       credentials: true,
     },
   },
