@@ -13,7 +13,7 @@
   "license": "ISC",
   "author": "",
   "type": "module",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "dev": "tsx watch --env-file=.env src/server.ts",
     "build": "tsc",
