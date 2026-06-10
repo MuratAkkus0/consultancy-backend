@@ -11,6 +11,7 @@ import {
 import { adminProfilesTable } from "./admin_profiles.js";
 import { consultantProfilesTable } from "./consultant_profiles.js";
 import { studentProfilesTable } from "./student_profiles.js";
+import { userConsentsTable } from "./user_consents.js";
 
 export const userRoleEnum = pgEnum("user_role", [
   "admin",
@@ -114,6 +115,7 @@ export const verifications = pgTable(
 export const usersRelations = relations(users, ({ one, many }) => ({
   sessions: many(sessions),
   accounts: many(accounts),
+  consents: many(userConsentsTable),
   adminProfile: one(adminProfilesTable, {
     fields: [users.id],
     references: [adminProfilesTable.userId],

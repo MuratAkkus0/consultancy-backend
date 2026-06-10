@@ -17,9 +17,7 @@ export const studentTargetCountriesTable = pgTable(
     notes: text(),
     ...timestamps,
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.studentProfileId, t.countryId] }),
-  }),
+  (t) => [primaryKey({ columns: [t.studentProfileId, t.countryId] })],
 );
 
 export const studentTargetCountriesRelations = relations(

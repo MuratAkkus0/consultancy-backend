@@ -4,3 +4,6 @@ export * from "./consultant_profiles.js";
 export * from "./student_profiles.js";
 export * from "./countries.js";
 export * from "./student_target_countries.js";
+export * from "./user_consents.js";
+export * from "./languages.js";
+export * from "./student_languages.js";
