@@ -12,3 +12,6 @@ coverage
 # DB
 postgres-data
 
+# Local schema/code backups
+*.backup.ts
+

@@ -21,6 +21,9 @@ const EnvSchema = z.object({
   JWT_EXPIRES_IN: z.string().default("15m"),
   JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
 
+  BETTER_AUTH_SECRET: z.string().min(32),
+  BETTER_AUTH_URL: z.url(),
+
   ALLOWED_ORIGINS: z
     .string()
     .transform((s) =>

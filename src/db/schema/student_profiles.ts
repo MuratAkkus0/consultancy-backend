@@ -9,7 +9,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { usersTable } from "./users.js";
+import { users } from "./auth.js";
 import { timestamps } from "./_shared.js";
 import { studentTargetCountriesTable } from "./student_target_countries.js";
 
@@ -48,7 +48,7 @@ export const studentProfilesTable = pgTable("student_profiles", {
   userId: uuid("user_id")
     .notNull()
     .unique()
-    .references(() => usersTable.id, { onDelete: "cascade" }),
+    .references(() => users.id, { onDelete: "cascade" }),
   nationality: varchar({ length: 50 }),
   passportNumber: varchar("passport_number", { length: 50 }),
   currentEducationLevel: educationLevelEnum("current_education_level"),
@@ -73,9 +73,9 @@ export const studentProfilesTable = pgTable("student_profiles", {
 export const studentProfilesRelations = relations(
   studentProfilesTable,
   ({ one, many }) => ({
-    user: one(usersTable, {
+    user: one(users, {
       fields: [studentProfilesTable.userId],
-      references: [usersTable.id],
+      references: [users.id],
     }),
     targetCountries: many(studentTargetCountriesTable),
   }),

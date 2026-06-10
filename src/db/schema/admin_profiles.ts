@@ -1,6 +1,6 @@
 import { pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { usersTable } from "./users.js";
+import { users } from "./auth.js";
 import { timestamps } from "./_shared.js";
 
 export const adminProfilesTable = pgTable("admin_profiles", {
@@ -8,7 +8,7 @@ export const adminProfilesTable = pgTable("admin_profiles", {
   userId: uuid("user_id")
     .notNull()
     .unique()
-    .references(() => usersTable.id, {
+    .references(() => users.id, {
       onDelete: "cascade",
     }),
   notes: text().array(),
@@ -18,9 +18,9 @@ export const adminProfilesTable = pgTable("admin_profiles", {
 export const adminProfilesRelations = relations(
   adminProfilesTable,
   ({ one }) => ({
-    user: one(usersTable, {
+    user: one(users, {
       fields: [adminProfilesTable.userId],
-      references: [usersTable.id],
+      references: [users.id],
     }),
   }),
 );

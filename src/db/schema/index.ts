@@ -1,4 +1,4 @@
-export * from "./users.js";
+export * from "./auth.js";
 export * from "./admin_profiles.js";
 export * from "./consultant_profiles.js";
 export * from "./student_profiles.js";

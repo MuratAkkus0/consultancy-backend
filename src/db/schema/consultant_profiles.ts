@@ -7,7 +7,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { usersTable } from "./users.js";
+import { users } from "./auth.js";
 import { timestamps } from "./_shared.js";
 
 export interface ConsultantCertificate {
@@ -22,7 +22,7 @@ export const consultantProfilesTable = pgTable("consultant_profiles", {
   userId: uuid("user_id")
     .notNull()
     .unique()
-    .references(() => usersTable.id, { onDelete: "cascade" }),
+    .references(() => users.id, { onDelete: "cascade" }),
   bio: text(),
   yearsOfExperience: integer("years_of_experience"),
   specializations: text().array(),
@@ -37,9 +37,9 @@ export const consultantProfilesTable = pgTable("consultant_profiles", {
 export const consultantProfilesRelations = relations(
   consultantProfilesTable,
   ({ one }) => ({
-    user: one(usersTable, {
+    user: one(users, {
       fields: [consultantProfilesTable.userId],
-      references: [usersTable.id],
+      references: [users.id],
     }),
   }),
 );
