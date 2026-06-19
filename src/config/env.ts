@@ -14,6 +14,10 @@ const EnvSchema = z.object({
   // DATABASE_URL — Postgres connection string
   DATABASE_URL: z.url(),
 
+  // SEED
+  SEED_ADMIN_EMAIL: z.string().optional(),
+  SEED_ADMIN_PASSWORD: z.string().optional(),
+
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 chars"),
 
   JWT_REFRESH_SECRET: z.string().min(32),
