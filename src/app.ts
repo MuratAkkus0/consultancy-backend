@@ -4,6 +4,7 @@ import { auth } from "./lib/auth.js";
 import { toNodeHandler } from "better-auth/node";
 import { fromNodeHeaders } from "better-auth/node";
 import { env } from "./config/env.js";
+import onboardingRoutes from "./modules/onboarding/onboarding.routes.js";
 const app = express();
 
 app.use(
@@ -24,12 +25,10 @@ app.all("/api/auth/*splat", async (req, res, next) => {
     console.error(`[AUTH-ERR] ${req.method} ${req.url}`);
     console.error(err);
     if (!res.headersSent) {
-      res
-        .status(500)
-        .json({
-          error: err instanceof Error ? err.message : String(err),
-          stack: err instanceof Error ? err.stack : undefined,
-        });
+      res.status(500).json({
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
     }
     next(err);
   }
@@ -53,6 +52,8 @@ app.get("/health", (_req, res) => {
 app.get("/", (_req, res) => {
   res.send("Hello World!");
 });
+
+app.use("/api/v1/onboarding", onboardingRoutes);
 
 app.use(
   (

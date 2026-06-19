@@ -15,7 +15,7 @@ import { users } from "./auth.js";
 import { timestamps } from "./_shared.js";
 import { studentTargetCountriesTable } from "./student_target_countries.js";
 import { studentLanguagesTable } from "./student_languages.js";
-import type { EducationLevel } from "../types.js";
+import type { TargetProgram } from "../types.js";
 
 export const educationLevelEnum = pgEnum("education_level", [
   "primary",
@@ -27,24 +27,6 @@ export const educationLevelEnum = pgEnum("education_level", [
   "master",
   "doctorate",
 ]);
-
-export interface TargetProgram {
-  country: string;
-  university: string;
-  program: string;
-  degreeLevel: EducationLevel;
-  intakeTerm: string;
-  state?: string;
-  city?: string;
-  priority?: number;
-  estimatedDeadline?: string; // ISO 8601: "2026-01-15"
-  estimatedTuition?: {
-    amount: number;
-    currency: string;
-  };
-  websiteUrl?: string;
-  notes?: string;
-}
 
 export const studentProfilesTable = pgTable("student_profiles", {
   id: uuid().primaryKey().defaultRandom(),

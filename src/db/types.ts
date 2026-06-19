@@ -1,16 +1,20 @@
+import z from "zod";
 import type {
   userGenderEnum,
   userRoleEnum,
+  users,
   userStatusEnum,
 } from "./schema/auth.js";
 import type { languageLevel } from "./schema/student_languages.js";
-import type { educationLevelEnum } from "./schema/student_profiles.js";
+import { educationLevelEnum } from "./schema/student_profiles.js";
 import type { consentTypeEnum } from "./schema/user_consents.js";
 
 // Language
 export type LanguageLevel = (typeof languageLevel.enumValues)[number];
 
 // User
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 export type UserStatus = (typeof userStatusEnum.enumValues)[number];
 export type UserGender = (typeof userGenderEnum.enumValues)[number];
@@ -20,3 +24,25 @@ export type ConsentType = (typeof consentTypeEnum.enumValues)[number];
 
 // Student
 export type EducationLevel = (typeof educationLevelEnum.enumValues)[number];
+
+export const targetProgramSchema = z.object({
+  country: z.string(),
+  university: z.string(),
+  program: z.string(),
+  degreeLevel: z.enum(educationLevelEnum.enumValues),
+  intakeTerm: z.string(),
+  state: z.string().optional(),
+  city: z.string().optional(),
+  priority: z.int().optional(),
+  estimatedDeadline: z.iso.date().optional(),
+  estimatedTuition: z
+    .object({
+      amount: z.number(),
+      currency: z.string(),
+    })
+    .optional(),
+  websiteUrl: z.url().optional(),
+  notes: z.string().optional(),
+});
+
+export type TargetProgram = z.infer<typeof targetProgramSchema>;
