@@ -5,6 +5,7 @@ import { toNodeHandler } from "better-auth/node";
 import { fromNodeHeaders } from "better-auth/node";
 import { env } from "./config/env.js";
 import onboardingRoutes from "./modules/onboarding/onboarding.routes.js";
+import studentsRoutes from "./modules/students/students.routes.js";
 const app = express();
 
 app.use(
@@ -54,6 +55,7 @@ app.get("/", (_req, res) => {
 });
 
 app.use("/api/v1/onboarding", onboardingRoutes);
+app.use("/api/v1/students", studentsRoutes);
 
 app.use(
   (
