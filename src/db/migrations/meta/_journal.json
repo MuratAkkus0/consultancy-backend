@@ -15,6 +15,13 @@
       "when": 1781128920453,
       "tag": "0001_fearless_the_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781131704533,
+      "tag": "0002_nebulous_tag",
+      "breakpoints": true
     }
   ]
 }

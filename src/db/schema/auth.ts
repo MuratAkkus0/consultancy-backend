@@ -46,7 +46,7 @@ export const users = pgTable("users", {
   lastName: text("last_name").notNull(),
   birthDate: timestamp("birth_date"),
   gender: userGenderEnum("gender"),
-  role: userRoleEnum("role").default("student"),
+  role: userRoleEnum("role").default("student").notNull(),
   phone: text("phone"),
   preferredLanguage: text("preferred_language").default("tr"),
   timezone: text("timezone"),
