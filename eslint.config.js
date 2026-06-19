@@ -38,6 +38,9 @@ export default defineConfig([
       "@typescript-eslint/no-explicit-any": "warn",
       "no-unused-vars": "off", // tsconfig already does
       "@typescript-eslint/no-unused-vars": "off", // tsconfig already does
+      "@typescript-eslint/no-unsafe-return": "warn",
+      "@typescript-eslint/no-unsafe-argument": "warn",
+      "@typescript-eslint/no-unsafe-member-access": "warn",
       eqeqeq: ["error", "always"],
       "no-implicit-coercion": "error",
       "no-var": "error",
