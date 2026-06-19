@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import type { UserRole } from "../db/types.js";
 
-import { roleSchema } from "better-auth/client";
+import { roleSchema } from "../lib/validators.js";
 
 export const requireRole = (...allowedRoles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -14,7 +14,7 @@ export const requireRole = (...allowedRoles: UserRole[]) => {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    if (!allowedRoles.includes(parsed.data as UserRole)) {
+    if (!allowedRoles.includes(parsed.data)) {
       return res.status(403).json({ error: "Forbidden" });
     }
     next();
