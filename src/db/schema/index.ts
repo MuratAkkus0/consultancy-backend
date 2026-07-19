@@ -7,3 +7,4 @@ export * from "./student_target_countries.js";
 export * from "./user_consents.js";
 export * from "./languages.js";
 export * from "./student_languages.js";
+export * from "./consultant_assignments.js";
