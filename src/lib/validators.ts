@@ -11,3 +11,6 @@ export const paginationSchema = z.object({
 export const uuidParamSchema = z.object({
   id: z.uuid(),
 });
+
+export type PaginationParams = z.infer<typeof paginationSchema>;
+export type UuidParam = z.infer<typeof uuidParamSchema>;
