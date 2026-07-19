@@ -45,4 +45,12 @@ export const targetProgramSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const consultantCertificateSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  certifyingAuthority: z.string(),
+  dateOfIssuance: z.iso.date(), // "2024-01-15" (YYYY-MM-DD)
+});
+
+export type ConsultantCertificate = z.infer<typeof consultantCertificateSchema>;
 export type TargetProgram = z.infer<typeof targetProgramSchema>;

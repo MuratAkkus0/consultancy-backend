@@ -9,13 +9,7 @@ import {
 import { relations } from "drizzle-orm";
 import { users } from "./auth.js";
 import { timestamps } from "./_shared.js";
-
-export interface ConsultantCertificate {
-  name: string;
-  description: string;
-  certifyingAuthority: string;
-  dateOfIssuance: string; // ISO 8601 — "2024-01-15"
-}
+import type { ConsultantCertificate } from "../types.js";
 
 export const consultantProfilesTable = pgTable("consultant_profiles", {
   id: uuid().primaryKey().defaultRandom(),
