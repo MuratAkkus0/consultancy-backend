@@ -78,7 +78,10 @@ export const consultantsService = {
       if (data.user && Object.keys(data.user).length) {
         await tx
           .update(users)
-          .set(data.user)
+          .set({
+            ...data.user,
+            name: `${data.user.firstName ?? user.firstName} ${data.user.lastName ?? user.lastName}`,
+          })
           .where(and(eq(users.id, id), eq(users.status, "active")));
       }
       if (
