@@ -1,12 +1,5 @@
 import { db, studentProfilesTable } from "../../db/index.js";
-
-const userIdentityColumns = {
-  id: true,
-  firstName: true,
-  lastName: true,
-  email: true,
-  status: true,
-} as const;
+import { userIdentityColumns } from "../../db/selections.js";
 
 export const studentsService = {
   list: async (page: number, limit: number) => {
