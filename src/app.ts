@@ -1,4 +1,8 @@
-import express from "express";
+import express, {
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
 import cors from "cors";
 import { auth } from "./lib/auth.js";
 import { toNodeHandler } from "better-auth/node";
@@ -6,6 +10,11 @@ import { fromNodeHeaders } from "better-auth/node";
 import { env } from "./config/env.js";
 import onboardingRoutes from "./modules/onboarding/onboarding.routes.js";
 import studentsRoutes from "./modules/students/students.routes.js";
+import consultantsRoutes from "./modules/consultants/consultants.routes.js";
+import assignmentsRoutes from "./modules/assignments/assignments.routes.js";
+import adminRoutes from "./modules/admin/admin.routes.js";
+import createHttpError from "http-errors";
+
 const app = express();
 
 app.use(
@@ -17,6 +26,10 @@ app.use(
 );
 
 const authHandler = toNodeHandler(auth);
+app.post("/api/auth/update-user", (_req, res) => {
+  res.status(404);
+});
+
 app.all("/api/auth/*splat", async (req, res, next) => {
   console.log(`[AUTH-IN]  ${req.method} ${req.url}`);
   try {
@@ -56,21 +69,29 @@ app.get("/", (_req, res) => {
 
 app.use("/api/v1/onboarding", onboardingRoutes);
 app.use("/api/v1/students", studentsRoutes);
+app.use("/api/v1/consultants", consultantsRoutes);
+app.use("/api/v1/assignments", assignmentsRoutes);
+app.use("/api/v1/admin", adminRoutes);
 
-app.use(
-  (
-    err: unknown,
-    _req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction,
-  ) => {
-    console.error("[EXPRESS-ERR]", err);
-    if (!res.headersSent) {
-      res
-        .status(500)
-        .json({ error: err instanceof Error ? err.message : String(err) });
-    }
-  },
-);
+// 404 Handler
+app.use((_req, res) => {
+  res.status(404).json({ error: "Not found" });
+});
+
+// Error Handler
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  if (createHttpError.isHttpError(err)) {
+    const issues: unknown = err.issues;
+    return res.status(err.status).json({
+      error: err.expose ? err.message : "Internal server error",
+      ...(err.expose && issues ? { issues } : {}),
+    });
+  }
+
+  console.error("[EXPRESS-ERR]", err);
+  if (!res.headersSent) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 export { app };

@@ -45,6 +45,8 @@ export default defineConfig([
       "no-implicit-coercion": "error",
       "no-var": "error",
       "prefer-const": "error",
+      "@typescript-eslint/prefer-for-of": "warn",
+      "@typescript-eslint/prefer-nullish-coalescing": "warn",
     },
   },
 
