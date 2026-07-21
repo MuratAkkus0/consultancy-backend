@@ -8,12 +8,17 @@ import { auth } from "./lib/auth.js";
 import { toNodeHandler } from "better-auth/node";
 import { fromNodeHeaders } from "better-auth/node";
 import { env } from "./config/env.js";
+import swaggerUI from "swagger-ui-express";
 import onboardingRoutes from "./modules/onboarding/onboarding.routes.js";
 import studentsRoutes from "./modules/students/students.routes.js";
 import consultantsRoutes from "./modules/consultants/consultants.routes.js";
 import assignmentsRoutes from "./modules/assignments/assignments.routes.js";
 import adminRoutes from "./modules/admin/admin.routes.js";
+import meRoutes from "./modules/me/me.routes.js";
+import coursesRoutes from "./modules/courses/courses.routes.js";
+import paymentsRoutes from "./modules/payments/payments.routes.js";
 import createHttpError from "http-errors";
+import { buildOpenApiDocument } from "./swagger.js";
 
 const app = express();
 
@@ -59,6 +64,9 @@ app.get("/api/me", async (req, res) => {
   return res.json(session);
 });
 
+// Swagger UI
+app.use("/swagger-ui", swaggerUI.serve, swaggerUI.setup(buildOpenApiDocument()));
+
 app.get("/health", (_req, res) => {
   res.send("ok").status(200);
 });
@@ -72,6 +80,9 @@ app.use("/api/v1/students", studentsRoutes);
 app.use("/api/v1/consultants", consultantsRoutes);
 app.use("/api/v1/assignments", assignmentsRoutes);
 app.use("/api/v1/admin", adminRoutes);
+app.use("/api/v1/me", meRoutes);
+app.use("/api/v1/courses", coursesRoutes);
+app.use("/api/v1/payments", paymentsRoutes);
 
 // 404 Handler
 app.use((_req, res) => {
