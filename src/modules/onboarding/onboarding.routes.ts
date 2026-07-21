@@ -16,20 +16,6 @@ const STUDENT_ERRORS = {
 } as const;
 
 registerRoute({
-  method: "get",
-  path: "/api/v1/onboarding",
-  tags: ["Onboarding"],
-  summary: "Get the current student's onboarding data",
-  responses: { 200: { description: "Onboarding data" }, ...STUDENT_ERRORS },
-});
-router.get(
-  "/",
-  requireAuth,
-  requireRole("student"),
-  onboardingController.getAll,
-);
-
-registerRoute({
   method: "post",
   path: "/api/v1/onboarding",
   tags: ["Onboarding"],

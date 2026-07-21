@@ -5,9 +5,6 @@ import type { CreateOnboardingDto } from "./onboarding.types.js";
 import { isUniqueViolation } from "../../lib/service-helpers.js";
 
 export const onboardingController = {
-  getAll: (_req: Request, res: Response, _next: NextFunction) => {
-    res.json({});
-  },
   create: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const data = req.body as CreateOnboardingDto;
