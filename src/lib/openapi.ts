@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { env } from "../config/env.js";
 
 /**
  * A single API endpoint's documentation, declared next to its route but
@@ -130,12 +129,10 @@ export function buildOpenApiDocument() {
       version: "1.0.0",
       description: "Milestonegermany backend app",
     },
-    servers: [
-      {
-        url: `http://localhost:${env.APP_PORT}`,
-        description: "Local development server",
-      },
-    ],
+    // Relative URL: "Try it out" requests target whatever origin the docs are
+    // served from — localhost in dev, the Railway domain in prod. Always
+    // same-origin, so CORS and mixed-content never come into play.
+    servers: [{ url: "/" }],
     components: {
       securitySchemes: {
         cookieAuth: {
