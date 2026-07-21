@@ -34,27 +34,31 @@ export const userGenderEnum = pgEnum("gender", [
   "prefer_not_to_say",
 ]);
 
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  emailVerified: boolean("email_verified").default(false).notNull(),
-  image: text("image"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
-  birthDate: timestamp("birth_date"),
-  gender: userGenderEnum("gender"),
-  role: userRoleEnum("role").default("student").notNull(),
-  phone: text("phone"),
-  preferredLanguage: text("preferred_language").default("tr"),
-  timezone: text("timezone"),
-  status: userStatusEnum("status").default("active"),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    emailVerified: boolean("email_verified").default(false).notNull(),
+    image: text("image"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name").notNull(),
+    birthDate: timestamp("birth_date"),
+    gender: userGenderEnum("gender"),
+    role: userRoleEnum("role").default("student").notNull(),
+    phone: text("phone"),
+    preferredLanguage: text("preferred_language").default("tr"),
+    timezone: text("timezone"),
+    status: userStatusEnum("status").default("active"),
+  },
+  (t) => [index("users_role_created_at_idx").on(t.role, t.createdAt)],
+);
 
 export const sessions = pgTable(
   "sessions",
