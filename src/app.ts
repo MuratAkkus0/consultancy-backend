@@ -18,14 +18,16 @@ import meRoutes from "./modules/me/me.routes.js";
 import coursesRoutes from "./modules/courses/courses.routes.js";
 import paymentsRoutes from "./modules/payments/payments.routes.js";
 import createHttpError from "http-errors";
+import { z } from "zod";
 import { buildOpenApiDocument } from "./swagger.js";
+import { registerRoute } from "./lib/openapi.js";
 
 const app = express();
 
 app.use(
   cors({
     origin: env.ALLOWED_ORIGINS,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
   }),
 );
@@ -62,6 +64,29 @@ app.get("/api/me", async (req, res) => {
     headers: fromNodeHeaders(req.headers),
   });
   return res.json(session);
+});
+
+// Better Auth endpoints are served by the catch-all handler above, so they
+// have no route module to self-register from. Document sign-in here directly.
+// A successful sign-in sets the session cookie, which same-origin "Try it out"
+// calls from this Swagger UI then send automatically — no manual Authorize step.
+const signInEmailSchema = z.object({
+  email: z.email(),
+  password: z.string().min(1),
+  rememberMe: z.boolean().optional(),
+  callbackURL: z.string().optional(),
+});
+registerRoute({
+  method: "post",
+  path: "/api/auth/sign-in/email",
+  tags: ["Auth"],
+  summary: "Sign in with email & password",
+  isPublic: true,
+  request: { body: signInEmailSchema },
+  responses: {
+    200: { description: "Signed in; sets the session cookie" },
+    401: { description: "Invalid email or password" },
+  },
 });
 
 // Swagger UI
