@@ -1,12 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
+import createHttpError from "http-errors";
 import { onboardingService } from "./onboarding.service.js";
 import type { CreateOnboardingDto } from "./onboarding.types.js";
-
-const isUniqueViolation = (err: unknown): boolean =>
-  typeof err === "object" &&
-  err !== null &&
-  "code" in err &&
-  err.code === "23505";
+import { isUniqueViolation } from "../../lib/service-helpers.js";
 
 export const onboardingController = {
   getAll: (_req: Request, res: Response, _next: NextFunction) => {
@@ -19,9 +15,12 @@ export const onboardingController = {
       res.status(201).json(profile);
     } catch (err) {
       if (isUniqueViolation(err)) {
-        return res
-          .status(409)
-          .json({ error: "An onboarding profile already exists for this user." });
+        return next(
+          createHttpError(
+            409,
+            "An onboarding profile already exists for this user.",
+          ),
+        );
       }
       next(err);
     }

@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
+import createHttpError from "http-errors";
 import { studentsService } from "./students.service.js";
-import type { PaginationParams, UuidParam } from "./students.types.js";
+import type { PaginationParams, UuidParam } from "../../lib/validators.js";
 
 export const studentsController = {
   list: async (req: Request, res: Response, next: NextFunction) => {
@@ -18,7 +19,7 @@ export const studentsController = {
       const { id } = req.params as unknown as UuidParam;
       const profile = await studentsService.getById(id);
       if (!profile) {
-        return res.status(404).json({ error: "Student profile not found." });
+        throw createHttpError(404, "Student profile not found.");
       }
       res.json(profile);
     } catch (err) {
