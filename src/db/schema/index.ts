@@ -8,3 +8,5 @@ export * from "./user_consents.js";
 export * from "./languages.js";
 export * from "./student_languages.js";
 export * from "./consultant_assignments.js";
+export * from "./courses.js";
+export * from "./student_courses.js";

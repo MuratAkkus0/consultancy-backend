@@ -13,6 +13,8 @@ import { consultantProfilesTable } from "./consultant_profiles.js";
 import { studentProfilesTable } from "./student_profiles.js";
 import { userConsentsTable } from "./user_consents.js";
 import { consultantAssignmentsTable } from "./consultant_assignments.js";
+import { coursesTable } from "./courses.js";
+import { studentCoursesTable } from "./student_courses.js";
 
 export const userRoleEnum = pgEnum("user_role", [
   "admin",
@@ -135,6 +137,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   assignmentsAsStudent: many(consultantAssignmentsTable, {
     relationName: "assignment_student",
   }),
+  course: many(coursesTable),
+  studentCourses: many(studentCoursesTable),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
