@@ -51,21 +51,54 @@ const toSchema = (s: z.ZodType, io: "input" | "output") =>
 /** Express ":id" -> OpenAPI "{id}". */
 const toOpenApiPath = (p: string) => p.replace(/:([A-Za-z0-9_]+)/g, "{$1}");
 
-/** Explode a Zod object into individual OpenAPI path/query parameters. */
+interface JsonNode {
+  properties?: Record<string, unknown>;
+  required?: string[];
+  anyOf?: JsonNode[];
+  oneOf?: JsonNode[];
+  allOf?: JsonNode[];
+}
+
+/**
+ * Explode a Zod object into individual OpenAPI path/query parameters.
+ * Also handles unions (z.union -> anyOf) and intersections (z.and -> allOf),
+ * which have no top-level `properties` — their fields live in sub-branches.
+ */
 function parametersFrom(
   schema: z.ZodType | undefined,
   location: "path" | "query",
 ) {
   if (!schema) return [];
-  const json = toSchema(schema, "input") as {
-    properties?: Record<string, unknown>;
-    required?: string[];
-  };
-  const required = json.required ?? [];
-  return Object.entries(json.properties ?? {}).map(([name, sch]) => ({
+  const json = toSchema(schema, "input") as JsonNode;
+
+  // A union (anyOf/oneOf) is either/or, so a field that isn't in every branch
+  // can't be globally required. A plain object or intersection (allOf) is a
+  // simple AND, so a field is required wherever its branch requires it.
+  const unionBranches = json.anyOf ?? json.oneOf;
+  const branches: JsonNode[] = json.properties
+    ? [json]
+    : (unionBranches ?? json.allOf ?? []);
+  const requireInEveryBranch = Boolean(unionBranches);
+
+  const merged = new Map<string, { schema: unknown; requiredIn: number }>();
+  for (const branch of branches) {
+    const req = new Set(branch.required ?? []);
+    for (const [name, sch] of Object.entries(branch.properties ?? {})) {
+      const entry = merged.get(name) ?? { schema: sch, requiredIn: 0 };
+      if (req.has(name)) entry.requiredIn += 1;
+      merged.set(name, entry);
+    }
+  }
+
+  return [...merged.entries()].map(([name, { schema: sch, requiredIn }]) => ({
     name,
     in: location,
-    required: location === "path" ? true : required.includes(name),
+    required:
+      location === "path" ||
+      (branches.length > 0 &&
+        (requireInEveryBranch
+          ? requiredIn === branches.length
+          : requiredIn > 0)),
     schema: sch,
   }));
 }

@@ -49,6 +49,7 @@ registerRoute({
   path: "/api/v1/assignments",
   tags: ["Assignments"],
   summary: "List assignments",
+  description: "Provide exactly one of consultantId or studentId.",
   request: { query: assignmentQuerySchema },
   responses: { 200: { description: "List of assignments" }, ...ADMIN_ERRORS },
 });
