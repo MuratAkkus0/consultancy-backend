@@ -17,7 +17,6 @@ export const studentCoursesTable = pgTable(
     studentId: uuid("student_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    studentFeedback: text(),
     ...timestamps,
   },
   (t) => [
