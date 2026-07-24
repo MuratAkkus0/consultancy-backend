@@ -26,5 +26,5 @@ export const coursesRelations = relations(coursesTable, ({ one, many }) => ({
     fields: [coursesTable.consultantId],
     references: [users.id],
   }),
-  studentCourses: many(studentCoursesTable),
+  students: many(studentCoursesTable),
 }));

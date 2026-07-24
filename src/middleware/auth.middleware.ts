@@ -15,6 +15,11 @@ export const requireAuth = async (
   if (!userSession) {
     throw createHttpError(401, "Unauthorized.");
   }
+
+  if (userSession.user.status !== "active") {
+    throw createHttpError(403, "Account is not active.");
+  }
+
   req.user = userSession.user;
   req.session = userSession.session;
 

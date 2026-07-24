@@ -1,5 +1,5 @@
-import { pgTable, text, uuid } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { pgTable, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
 import { users } from "./auth.js";
 import { coursesTable } from "./courses.js";
 import { timestamps } from "./_shared.js";
@@ -22,6 +22,9 @@ export const studentCoursesTable = pgTable(
   (t) => [
     index("student_courses_student_id_idx").on(t.studentId),
     index("student_courses_course_id_idx").on(t.courseId),
+    uniqueIndex("uniq_active_enrollment")
+      .on(t.courseId, t.studentId)
+      .where(sql`deleted_at IS NULL`),
   ],
 );
 

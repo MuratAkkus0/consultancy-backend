@@ -12,3 +12,13 @@ export const userIdentityColumns = {
   preferredLanguage: true,
   timezone: true,
 } as const;
+
+export const userBaseColumns = {
+  id: true,
+  name: true,
+  firstName: true,
+  lastName: true,
+  status: true,
+  image: true,
+  gender: true,
+} as const;
