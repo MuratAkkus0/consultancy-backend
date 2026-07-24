@@ -33,7 +33,7 @@ app.use(
 
 const authHandler = toNodeHandler(auth);
 app.post("/api/auth/update-user", (_req, res) => {
-  res.status(404);
+  throw createHttpError(404);
 });
 
 app.all("/api/auth/*splat", async (req, res, next) => {
@@ -43,13 +43,6 @@ app.all("/api/auth/*splat", async (req, res, next) => {
     console.log(`[AUTH-OUT] ${req.method} ${req.url} -> ${res.statusCode}`);
   } catch (err) {
     console.error(`[AUTH-ERR] ${req.method} ${req.url}`);
-    console.error(err);
-    if (!res.headersSent) {
-      res.status(500).json({
-        error: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-    }
     next(err);
   }
 });
@@ -57,13 +50,6 @@ app.all("/api/auth/*splat", async (req, res, next) => {
 // Mount express json middleware after Better Auth handler
 // or only apply it to routes that don't interact with Better Auth
 app.use(express.json({ limit: "100kb" }));
-
-app.get("/api/me", async (req, res) => {
-  const session = await auth.api.getSession({
-    headers: fromNodeHeaders(req.headers),
-  });
-  return res.json(session);
-});
 
 // Better Auth endpoints are served by the catch-all handler above, so they
 // have no route module to self-register from. Document sign-in here directly.
