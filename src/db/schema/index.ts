@@ -10,3 +10,4 @@ export * from "./student_languages.js";
 export * from "./consultant_assignments.js";
 export * from "./courses.js";
 export * from "./student_courses.js";
+export * from "./payments.js";
