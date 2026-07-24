@@ -13,6 +13,7 @@ import onboardingRoutes from "./modules/onboarding/onboarding.routes.js";
 import studentsRoutes from "./modules/students/students.routes.js";
 import consultantsRoutes from "./modules/consultants/consultants.routes.js";
 import assignmentsRoutes from "./modules/assignments/assignments.routes.js";
+import coursesRoutes from "./modules/courses/courses.routes.js";
 import adminRoutes from "./modules/admin/admin.routes.js";
 import createHttpError from "http-errors";
 import { z } from "zod";
@@ -105,6 +106,7 @@ app.use("/api/v1/onboarding", onboardingRoutes);
 app.use("/api/v1/students", studentsRoutes);
 app.use("/api/v1/consultants", consultantsRoutes);
 app.use("/api/v1/assignments", assignmentsRoutes);
+app.use("/api/v1/courses", coursesRoutes);
 app.use("/api/v1/admin", adminRoutes);
 
 // 404 Handler
