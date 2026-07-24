@@ -88,6 +88,16 @@ registerRoute({
   },
 });
 
+registerRoute({
+  method: "post",
+  path: "/api/auth/sign-out",
+  tags: ["Auth"],
+  summary: "Sign out (clears the session cookie)",
+  responses: {
+    200: { description: "Signed out; session cookie cleared" },
+  },
+});
+
 // Swagger UI
 app.use(
   "/swagger-ui",
