@@ -1,0 +1,112 @@
+import { Router } from "express";
+import { requireAuth } from "../../middleware/auth.middleware.js";
+import { meController } from "./me.controller.js";
+import {
+  validateBodyByRole,
+  validateQuery,
+} from "../../middleware/validate.middleware.js";
+import {
+  editAdminSelfSchema,
+  editConsultantSelfSchema,
+  editStudentSelfSchema,
+} from "./me.validators.js";
+import { paginationSchema } from "../../lib/validators.js";
+import { requireRole } from "../../middleware/role.middleware.js";
+import { studentPaymentQuerySchema } from "../payments/payments.validators.js";
+import { registerRoute } from "../../lib/openapi.js";
+
+const router = Router();
+
+const AUTH_ERRORS = {
+  401: { description: "Not authenticated" },
+} as const;
+
+// Get the authenticated user's own profile (id comes from the session)
+registerRoute({
+  method: "get",
+  path: "/api/v1/me",
+  tags: ["Me"],
+  summary: "Get my profile",
+  description: "Returns the authenticated user with its role-specific profile.",
+  responses: {
+    200: { description: "The authenticated user's profile" },
+    404: { description: "User not found" },
+    ...AUTH_ERRORS,
+  },
+});
+router.get("/", requireAuth, meController.getProfile);
+
+// Update the authenticated user's own profile. The body schema is chosen
+// from the session role, so a student, consultant and admin each get their
+// own set of editable fields.
+registerRoute({
+  method: "patch",
+  path: "/api/v1/me",
+  tags: ["Me"],
+  summary: "Update my profile",
+  description:
+    "Updates the authenticated user's own fields. The request body is validated by role: a student, consultant and admin each get their own editable set (email, role and status are never editable here).",
+  request: { body: editStudentSelfSchema },
+  responses: {
+    200: { description: "Updated profile" },
+    400: { description: "Validation error" },
+    ...AUTH_ERRORS,
+  },
+});
+router.patch(
+  "/",
+  requireAuth,
+  validateBodyByRole({
+    student: editStudentSelfSchema,
+    consultant: editConsultantSelfSchema,
+    admin: editAdminSelfSchema,
+  }),
+  meController.editProfile,
+);
+
+// Get the authenticated user's own courses
+registerRoute({
+  method: "get",
+  path: "/api/v1/me/courses",
+  tags: ["Me"],
+  summary: "List my courses",
+  description:
+    "A student gets the courses they are enrolled in; a consultant gets the courses they own.",
+  request: { query: paginationSchema },
+  responses: {
+    200: { description: "The authenticated user's courses" },
+    403: { description: "Student or consultant role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.get(
+  "/courses",
+  requireAuth,
+  requireRole("student", "consultant"),
+  validateQuery(paginationSchema),
+  meController.getCourses,
+);
+
+// Get the authenticated user's own payments
+registerRoute({
+  method: "get",
+  path: "/api/v1/me/payments",
+  tags: ["Me"],
+  summary: "List my payments",
+  description: "Returns only the authenticated student's own payments.",
+  request: { query: studentPaymentQuerySchema },
+  responses: {
+    200: { description: "The authenticated student's payments" },
+    403: { description: "Student role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.get(
+  "/payments",
+  requireAuth,
+  requireRole("student"),
+  validateQuery(studentPaymentQuerySchema),
+  meController.getPayments,
+);
+
+export default router;

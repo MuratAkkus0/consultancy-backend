@@ -1,0 +1,65 @@
+import type { NextFunction, Request, Response } from "express";
+import { meService } from "./me.service.js";
+import type { User, UserRole } from "../../db/types.js";
+import type { EditSelfDTO } from "./me.types.js";
+import type { PaginationParams } from "../../lib/validators.js";
+import { coursesService } from "../courses/courses.service.js";
+import { paymentsService } from "../payments/payments.service.js";
+import type { StudentPaymentQuery } from "../payments/payments.types.js";
+
+export const meController = {
+  getProfile: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const profile = await meService.getByUserId(req.user!.id);
+      res.json(profile);
+    } catch (err) {
+      next(err);
+    }
+  },
+  editProfile: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id, role } = req.user!;
+      const data = req.body as unknown as EditSelfDTO;
+      const profile = await meService.editOwnProfile(
+        id,
+        role as UserRole,
+        data,
+      );
+      res.json(profile);
+    } catch (err) {
+      next(err);
+    }
+  },
+  getCourses: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id, role } = req.user! as User;
+      const { page, limit } = req.query as unknown as PaginationParams;
+      let course;
+      if (role === "student") {
+        course = await coursesService.listForStudent(page, limit, id);
+      } else if (role === "consultant") {
+        course = await coursesService.listForConsultant(page, limit, id);
+      }
+
+      res.json({
+        data: course?.data,
+        pagination: { page, limit, total: course?.total },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+  getPayments: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.user! as User;
+      const params = req.query as unknown as StudentPaymentQuery;
+      const { data, total } = await paymentsService.listForStudent(id, params);
+      res.json({
+        data,
+        pagination: { page: params.page, limit: params.limit, total },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+};
