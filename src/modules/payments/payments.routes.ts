@@ -30,7 +30,8 @@ registerRoute({
   path: "/api/v1/payments",
   tags: ["Payments"],
   summary: "Record a payment",
-  description: "Admin manually records a payment for a student.",
+  description:
+    "Admin manually records a payment for a student. `status` and `paidAt` are derived from each other when omitted: a paidAt implies status=paid, and status=paid without a paidAt is stamped with the current time; otherwise the payment defaults to pending. A pending payment with a paidAt is rejected.",
   request: { body: createPaymentSchema },
   responses: {
     201: { description: "Payment recorded" },
@@ -54,7 +55,7 @@ registerRoute({
   tags: ["Payments"],
   summary: "List payments",
   description:
-    "Paginated. Optionally filter by studentId; sortable by paidAt, amount or createdAt.",
+    "Paginated. Optionally filter by studentId; sortable by paidAt, amount, createdAt or status.",
   request: { query: paymentQuerySchema },
   responses: { 200: { description: "List of payments" }, ...ADMIN_ERRORS },
 });
@@ -112,6 +113,8 @@ registerRoute({
   path: "/api/v1/payments/:id",
   tags: ["Payments"],
   summary: "Edit a payment",
+  description:
+    "Partial update. `status` and `paidAt` are kept consistent: setting status=paid stamps paidAt with the current time when none is given, setting status=pending clears paidAt, sending a paidAt implies paid, and sending paidAt=null implies pending. A pending payment with a paidAt is rejected.",
   request: { params: uuidParamSchema, body: editPaymentSchema },
   responses: {
     200: { description: "Payment updated" },
