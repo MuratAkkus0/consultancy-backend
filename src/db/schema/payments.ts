@@ -18,6 +18,8 @@ export const paymentMethodEnum = pgEnum("payment_method", [
   "other",
 ]);
 
+export const paymentStatusEnum = pgEnum("payment_status", ["pending", "paid"]);
+
 // Payments are recorded manually by an admin. The table is soft-deleted - (deletedAt)
 export const paymentsTable = pgTable("payments", {
   id: uuid().defaultRandom().primaryKey(),
@@ -28,7 +30,8 @@ export const paymentsTable = pgTable("payments", {
   currency: varchar("currency", { length: 3 }).notNull().default("TRY"),
   method: paymentMethodEnum("method"),
   note: text("note"),
-  paidAt: timestamp("paid_at", { withTimezone: true }).notNull().defaultNow(),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  status: paymentStatusEnum("status").default("pending").notNull(),
   // Admin who recorded the payment. Kept for audit; nulled if that user is
   // hard-deleted so the payment record survives.
   recordedById: uuid("recorded_by_id").references(() => users.id),

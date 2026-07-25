@@ -9,6 +9,7 @@ import type { languageLevel } from "./schema/student_languages.js";
 import { educationLevelEnum } from "./schema/student_profiles.js";
 import type { consentTypeEnum } from "./schema/user_consents.js";
 import type { coursesTable } from "./schema/courses.js";
+import type { paymentStatusEnum } from "./schema/payments.js";
 
 // Language
 export type LanguageLevel = (typeof languageLevel.enumValues)[number];
@@ -58,3 +59,6 @@ export type TargetProgram = z.infer<typeof targetProgramSchema>;
 
 // Course
 export type Course = typeof coursesTable.$inferSelect;
+
+// Payments
+export type PaymentStatus = (typeof paymentStatusEnum.enumValues)[number];

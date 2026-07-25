@@ -14,6 +14,7 @@ const sortColumns = {
   paidAt: paymentsTable.paidAt,
   amount: paymentsTable.amount,
   createdAt: paymentsTable.createdAt,
+  status: paymentsTable.status,
 } as const;
 
 export const paymentsService = {
@@ -32,9 +33,14 @@ export const paymentsService = {
       throw createHttpError(404, "Student not found.");
     }
 
+    // `status` and `paidAt` are coupled: derive whichever half is missing.
+    // (The validator already rejects the contradictory pending+paidAt input.)
+    const status = data.status ?? (data.paidAt ? "paid" : "pending");
+    const paidAt = status === "paid" ? (data.paidAt ?? new Date()) : undefined;
+
     const [payment] = await db
       .insert(paymentsTable)
-      .values({ ...data, recordedById })
+      .values({ ...data, status, paidAt, recordedById })
       .returning();
 
     return payment;
@@ -52,7 +58,8 @@ export const paymentsService = {
       : isNull(paymentsTable.deletedAt);
 
     const sortColumn = sortColumns[sortBy];
-    const orderBy = order === "asc" ? asc(sortColumn) : desc(sortColumn);
+    const orderFn = order === "asc" ? asc : desc;
+    const orderBy = [orderFn(sortColumn), desc(paymentsTable.id)];
 
     const [data, total] = await Promise.all([
       db.query.paymentsTable.findMany({
@@ -80,7 +87,8 @@ export const paymentsService = {
     );
 
     const sortColumn = sortColumns[sortBy];
-    const orderBy = order === "asc" ? asc(sortColumn) : desc(sortColumn);
+    const orderFn = order === "asc" ? asc : desc;
+    const orderBy = [orderFn(sortColumn), desc(paymentsTable.id)];
 
     const [data, total] = await Promise.all([
       db.query.paymentsTable.findMany({
@@ -116,6 +124,27 @@ export const paymentsService = {
   },
 
   editById: async (id: string, data: EditPaymentDTO) => {
+    // Keep the status/paidAt pair consistent on partial updates:
+    // - marking as paid without a date stamps paidAt with "now"
+    // - marking as pending clears paidAt (pending+paidAt is rejected upstream)
+    // - supplying only paidAt implies the payment is paid
+    if (
+      data.status === "paid" &&
+      (data.paidAt === undefined || data.paidAt === null)
+    ) {
+      data.paidAt = new Date();
+    } else if (data.status === "pending") {
+      data.paidAt = null;
+    } else if (
+      data.status === undefined &&
+      data.paidAt !== undefined &&
+      data.paidAt !== null
+    ) {
+      data.status = "paid";
+    } else if (data.status === undefined && data.paidAt === null) {
+      data.status = "pending";
+    }
+
     const [payment] = await db
       .update(paymentsTable)
       .set(data)
@@ -149,7 +178,10 @@ export const paymentsService = {
     const fmt = period === "year" ? "YYYY" : "YYYY-MM";
     const bucket = sql<string>`to_char(date_trunc(${truncUnit}, ${paymentsTable.paidAt}), ${fmt})`;
 
-    const conditions: SQL[] = [isNull(paymentsTable.deletedAt)];
+    const conditions: SQL[] = [
+      isNull(paymentsTable.deletedAt),
+      eq(paymentsTable.status, "paid"),
+    ];
     if (year !== undefined) {
       conditions.push(
         sql`extract(year from ${paymentsTable.paidAt}) = ${year}`,
