@@ -21,13 +21,6 @@ export const config = {
     idleTimeoutMs: 30_000,
   },
 
-  jwt: {
-    accessSecret: env.JWT_SECRET,
-    refreshSecret: env.JWT_REFRESH_SECRET,
-    accessExpiresIn: env.JWT_EXPIRES_IN,
-    refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
-  },
-
   rateLimit: {
     windowMs: env.RATE_LIMIT_WINDOW_MS,
     max: env.RATE_LIMIT_MAX,

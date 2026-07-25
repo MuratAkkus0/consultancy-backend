@@ -18,13 +18,6 @@ const EnvSchema = z.object({
   SEED_ADMIN_EMAIL: z.string().optional(),
   SEED_ADMIN_PASSWORD: z.string().optional(),
 
-  JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 chars"),
-
-  JWT_REFRESH_SECRET: z.string().min(32),
-
-  JWT_EXPIRES_IN: z.string().default("15m"),
-  JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
-
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.url(),
 
