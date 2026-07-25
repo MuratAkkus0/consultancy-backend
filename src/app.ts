@@ -19,6 +19,7 @@ import createHttpError from "http-errors";
 import { z } from "zod";
 import { buildOpenApiDocument } from "./swagger.js";
 import { registerRoute } from "./lib/openapi.js";
+import { apiLimiter, authLimiter } from "./middleware/rate-limit.middleware.js";
 
 const app = express();
 
@@ -30,7 +31,12 @@ app.use(
   }),
 );
 
+app.set("trust proxy", env.TRUSTED_PROXY_HOPS);
+
 const authHandler = toNodeHandler(auth);
+app.use("/api/auth/sign-in", authLimiter);
+app.use("/api/auth/sign-up", authLimiter);
+app.use("/api/auth/request-password-reset", authLimiter);
 
 app.post("/api/auth/update-user", (_req, _res) => {
   throw createHttpError(404);
@@ -98,6 +104,8 @@ app.get("/health", (_req, res) => {
 app.get("/", (_req, res) => {
   res.send("Hello World!");
 });
+
+app.use("/api/v1", apiLimiter);
 
 app.use("/api/v1/onboarding", onboardingRoutes);
 app.use("/api/v1/students", studentsRoutes);

@@ -38,6 +38,7 @@ const EnvSchema = z.object({
   // Rate limit
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
+  TRUSTED_PROXY_HOPS: z.coerce.number().int().positive(),
 
   // Email service
   SMTP_HOST: z.string().optional(),

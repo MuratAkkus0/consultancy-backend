@@ -12,6 +12,7 @@ export const config = {
       origin: env.ALLOWED_ORIGINS,
       credentials: true,
     },
+    trustedProxyHops: env.TRUSTED_PROXY_HOPS,
   },
 
   db: {
