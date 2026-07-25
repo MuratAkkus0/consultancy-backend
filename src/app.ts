@@ -6,7 +6,6 @@ import express, {
 import cors from "cors";
 import { auth } from "./lib/auth.js";
 import { toNodeHandler } from "better-auth/node";
-import { fromNodeHeaders } from "better-auth/node";
 import { env } from "./config/env.js";
 import swaggerUI from "swagger-ui-express";
 import onboardingRoutes from "./modules/onboarding/onboarding.routes.js";
@@ -32,7 +31,8 @@ app.use(
 );
 
 const authHandler = toNodeHandler(auth);
-app.post("/api/auth/update-user", (_req, res) => {
+
+app.post("/api/auth/update-user", (_req, _res) => {
   throw createHttpError(404);
 });
 
