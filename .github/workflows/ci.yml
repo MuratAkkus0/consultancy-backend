@@ -17,6 +17,11 @@ jobs:
       matrix:
         node-version: [24.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+    env:
+      DATABASE_URL: ${{secrets.DATABASE_URL}}
+      BETTER_AUTH_SECRET: ${{secrets.BETTER_AUTH_SECRET}}
+      BETTER_AUTH_URL: ${{secrets.BETTER_AUTH_URL}}
+      ALLOWED_ORIGINS: ${{secrets.ALLOWED_ORIGINS}}
 
     steps:
       - uses: actions/checkout@v6
