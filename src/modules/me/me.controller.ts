@@ -6,6 +6,10 @@ import type { PaginationParams } from "../../lib/validators.js";
 import { coursesService } from "../courses/courses.service.js";
 import { paymentsService } from "../payments/payments.service.js";
 import type { StudentPaymentQuery } from "../payments/payments.types.js";
+import { applicationsService } from "../applications/applications.service.js";
+import type { StudentApplicationQuery } from "../applications/applications.types.js";
+import { appointmentsService } from "../appointments/appointments.service.js";
+import type { StudentAppointmentQuery } from "../appointments/appointments.types.js";
 import { assignmentsService } from "../assignments/assignments.service.js";
 
 export const meController = {
@@ -45,6 +49,38 @@ export const meController = {
       res.json({
         data: course?.data,
         pagination: { page, limit, total: course?.total },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+  getApplications: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.user! as User;
+      const params = req.query as unknown as StudentApplicationQuery;
+      const { data, total } = await applicationsService.listForStudent(
+        id,
+        params,
+      );
+      res.json({
+        data,
+        pagination: { page: params.page, limit: params.limit, total },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+  getAppointments: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.user! as User;
+      const params = req.query as unknown as StudentAppointmentQuery;
+      const { data, total } = await appointmentsService.listForStudent(
+        id,
+        params,
+      );
+      res.json({
+        data,
+        pagination: { page: params.page, limit: params.limit, total },
       });
     } catch (err) {
       next(err);

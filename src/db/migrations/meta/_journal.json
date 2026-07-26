@@ -50,6 +50,13 @@
       "when": 1784983391155,
       "tag": "0006_mean_menace",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784997004713,
+      "tag": "0007_messy_prowler",
+      "breakpoints": true
     }
   ]
 }

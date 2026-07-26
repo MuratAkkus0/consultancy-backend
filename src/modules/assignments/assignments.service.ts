@@ -8,6 +8,8 @@ import type {
 } from "./assignments.types.js";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { consultantProfilesTable, users } from "../../db/index.js";
+import { applicationsService } from "../applications/applications.service.js";
+import { appointmentsService } from "../appointments/appointments.service.js";
 import { userBaseColumns, userIdentityColumns } from "../../db/selections.js";
 
 export const assignmentsService = {
@@ -98,6 +100,24 @@ export const assignmentsService = {
         .insert(consultantAssignmentsTable)
         .values(data)
         .returning();
+
+      // The student's active applications follow them to their new consultant;
+      // the old consultant loses access (all their queries are consultant-scoped).
+      // Runs on `tx` so the assignment and the handover commit atomically.
+      await applicationsService.reassignAllForStudent(
+        studentId,
+        consultantId,
+        tx,
+      );
+
+      // Future appointments follow too; ones clashing with the new consultant's
+      // calendar are cancelled instead. Safe here: the new consultant's row is
+      // already locked FOR UPDATE at the top of this transaction.
+      await appointmentsService.reassignFutureForStudent(
+        studentId,
+        consultantId,
+        tx,
+      );
 
       return newAssignment;
     });

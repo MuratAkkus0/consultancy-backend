@@ -13,6 +13,8 @@ import {
 import { paginationSchema } from "../../lib/validators.js";
 import { requireRole } from "../../middleware/role.middleware.js";
 import { studentPaymentQuerySchema } from "../payments/payments.validators.js";
+import { studentApplicationQuerySchema } from "../applications/applications.validators.js";
+import { studentAppointmentQuerySchema } from "../appointments/appointments.validators.js";
 import { registerRoute } from "../../lib/openapi.js";
 
 const router = Router();
@@ -107,6 +109,52 @@ router.get(
   requireRole("student"),
   validateQuery(studentPaymentQuerySchema),
   meController.getPayments,
+);
+
+// Get the authenticated student's own applications
+registerRoute({
+  method: "get",
+  path: "/api/v1/me/applications",
+  tags: ["Me"],
+  summary: "List my applications",
+  description:
+    "Returns only the authenticated student's own applications with the consultant's identity. Optionally filter by status. The consultant's private notes are never included.",
+  request: { query: studentApplicationQuerySchema },
+  responses: {
+    200: { description: "The authenticated student's applications" },
+    403: { description: "Student role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.get(
+  "/applications",
+  requireAuth,
+  requireRole("student"),
+  validateQuery(studentApplicationQuerySchema),
+  meController.getApplications,
+);
+
+// Get the authenticated student's own appointments
+registerRoute({
+  method: "get",
+  path: "/api/v1/me/appointments",
+  tags: ["Me"],
+  summary: "List my appointments",
+  description:
+    "Returns only the authenticated student's own appointments with the consultant's identity, ordered by scheduledAt (soonest first). Optionally filter by a datetime range (from/to).",
+  request: { query: studentAppointmentQuerySchema },
+  responses: {
+    200: { description: "The authenticated student's appointments" },
+    403: { description: "Student role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.get(
+  "/appointments",
+  requireAuth,
+  requireRole("student"),
+  validateQuery(studentAppointmentQuerySchema),
+  meController.getAppointments,
 );
 
 // Get the students assigned to the authenticated consultant

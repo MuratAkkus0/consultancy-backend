@@ -10,6 +10,10 @@ import { educationLevelEnum } from "./schema/student_profiles.js";
 import type { consentTypeEnum } from "./schema/user_consents.js";
 import type { coursesTable } from "./schema/courses.js";
 import type { paymentStatusEnum } from "./schema/payments.js";
+import type {
+  applicationsTable,
+  applicationStatusEnum,
+} from "./schema/applications.js";
 
 // Language
 export type LanguageLevel = (typeof languageLevel.enumValues)[number];
@@ -62,3 +66,8 @@ export type Course = typeof coursesTable.$inferSelect;
 
 // Payments
 export type PaymentStatus = (typeof paymentStatusEnum.enumValues)[number];
+
+// Application
+export type ApplicationStatus =
+  (typeof applicationStatusEnum.enumValues)[number];
+export type Application = typeof applicationsTable.$inferSelect;
