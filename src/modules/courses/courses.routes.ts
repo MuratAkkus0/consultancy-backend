@@ -57,20 +57,24 @@ router.post(
   coursesController.create,
 );
 
-// List courses (paginated, optional consultantId filter) - Admin only
+// List courses - Admin sees all; a consultant sees only their own.
 registerRoute({
   method: "get",
   path: "/api/v1/courses",
   tags: ["Courses"],
   summary: "List courses",
-  description: "Paginated. Optionally filter by consultantId.",
+  description:
+    "Paginated. Admin sees all courses and may filter by consultantId; a consultant always gets only their own courses (with the enrolled students embedded) regardless of the consultantId filter.",
   request: { query: courseQuerySchema },
-  responses: { 200: { description: "List of courses" }, ...ADMIN_ERRORS },
+  responses: {
+    200: { description: "List of courses" },
+    ...ADMIN_CONSULTANT_ERRORS,
+  },
 });
 router.get(
   "/",
   requireAuth,
-  requireRole("admin"),
+  requireRole("admin", "consultant"),
   validateQuery(courseQuerySchema),
   coursesController.list,
 );

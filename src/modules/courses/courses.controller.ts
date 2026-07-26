@@ -25,12 +25,21 @@ export const coursesController = {
   list: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { page, limit, consultantId } = req.query as unknown as CourseQuery;
-      const { data, total } = await coursesService.list(
-        page,
-        limit,
-        consultantId,
-      );
-      res.json({ data, pagination: { page, limit, total } });
+      const user = req.user as User;
+
+      let result;
+      if (user.role === "admin") {
+        result = await coursesService.list(page, limit, consultantId);
+      } else if (user.role === "consultant") {
+        // A consultant is always scoped to their own courses; the consultantId
+        // query param cannot widen that.
+        result = await coursesService.listForConsultant(page, limit, user.id);
+      }
+
+      res.json({
+        data: result?.data,
+        pagination: { page, limit, total: result?.total },
+      });
     } catch (err) {
       next(err);
     }
