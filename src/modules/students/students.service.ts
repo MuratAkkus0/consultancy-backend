@@ -1,18 +1,21 @@
-import { and, eq } from "drizzle-orm";
-import { db, users } from "../../db/index.js";
+import { and, eq, isNull, ne } from "drizzle-orm";
+import { consultantAssignmentsTable, db, users } from "../../db/index.js";
 import { userIdentityColumns } from "../../db/selections.js";
 
 export const studentsService = {
   list: async (page: number, limit: number) => {
     const offset = (page - 1) * limit;
 
-    const where = and(eq(users.status, "active"), eq(users.role, "student"));
+    const where = and(ne(users.status, "deleted"), eq(users.role, "student"));
 
     const [data, total] = await Promise.all([
       db.query.users.findMany({
         limit,
         offset,
-        orderBy: (table, { desc }) => [desc(table.createdAt)],
+        orderBy: (table, { asc, desc }) => [
+          asc(table.status),
+          desc(table.createdAt),
+        ],
         where,
         with: {
           studentProfile: true,
@@ -25,15 +28,60 @@ export const studentsService = {
   },
 
   getById: async (id: string) => {
-    const profile = await db.query.studentProfilesTable.findFirst({
-      where: (profiles, { eq }) => eq(profiles.id, id),
+    const student = await db.query.users.findFirst({
+      columns: userIdentityColumns,
+      where: (table, { and, eq, ne }) =>
+        and(
+          eq(table.id, id),
+          ne(table.status, "deleted"),
+          eq(table.role, "student"),
+        ),
       with: {
-        user: { columns: userIdentityColumns },
-        targetCountries: { with: { country: true } },
-        languages: { with: { language: true } },
+        studentProfile: {
+          with: {
+            targetCountries: { with: { country: true } },
+            languages: { with: { language: true } },
+          },
+        },
       },
     });
 
-    return profile ?? null;
+    return student ?? null;
+  },
+
+  // Ownership is enforced in the WHERE: the profile is returned only when its
+  // user is actively assigned to this consultant. Anything else falls through
+  // to the controller's 404, which doesn't reveal whether the student exists.
+  getByIdForConsultant: async (consultantId: string, id: string) => {
+    const assignedStudentIds = db
+      .select({ id: consultantAssignmentsTable.studentId })
+      .from(consultantAssignmentsTable)
+      .where(
+        and(
+          eq(consultantAssignmentsTable.consultantId, consultantId),
+          isNull(consultantAssignmentsTable.deletedAt),
+        ),
+      );
+
+    const student = await db.query.users.findFirst({
+      columns: userIdentityColumns,
+      where: (table, { and, eq, inArray }) =>
+        and(
+          eq(table.id, id),
+          eq(table.status, "active"),
+          inArray(table.id, assignedStudentIds),
+          eq(table.role, "student"),
+        ),
+      with: {
+        studentProfile: {
+          with: {
+            targetCountries: { with: { country: true } },
+            languages: { with: { language: true } },
+          },
+        },
+      },
+    });
+
+    return student ?? null;
   },
 };

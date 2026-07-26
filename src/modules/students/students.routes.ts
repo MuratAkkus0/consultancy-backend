@@ -36,9 +36,13 @@ registerRoute({
   path: "/api/v1/students/:id",
   tags: ["Students"],
   summary: "Get a student by id",
+  description:
+    "An admin gets any student; a consultant only gets a student actively assigned to them (anything else is a 404).",
   request: { params: uuidParamSchema },
   responses: {
     200: { description: "The student" },
+    401: { description: "Not authenticated" },
+    403: { description: "Admin or consultant role required" },
     404: { description: "Student not found" },
   },
 });
