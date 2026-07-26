@@ -109,4 +109,48 @@ router.get(
   meController.getPayments,
 );
 
+// Get the students assigned to the authenticated consultant
+registerRoute({
+  method: "get",
+  path: "/api/v1/me/assignments",
+  tags: ["Me"],
+  summary: "List my assigned students",
+  description:
+    "Returns the authenticated consultant's active assignments. Each item is the assignment record (id, createdAt) with the assigned student embedded.",
+  request: { query: paginationSchema },
+  responses: {
+    200: { description: "The authenticated consultant's assignments" },
+    403: { description: "Consultant role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.get(
+  "/assignments",
+  requireAuth,
+  requireRole("consultant"),
+  validateQuery(paginationSchema),
+  meController.getAssignments,
+);
+
+// Get the consultant assigned to the authenticated student
+registerRoute({
+  method: "get",
+  path: "/api/v1/me/consultant",
+  tags: ["Me"],
+  summary: "Get my consultant",
+  description:
+    "Returns the authenticated student's active assignment (id, createdAt) with the assigned consultant embedded, or null when no consultant is assigned.",
+  responses: {
+    200: { description: "The authenticated student's consultant, or null" },
+    403: { description: "Student role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.get(
+  "/consultant",
+  requireAuth,
+  requireRole("student"),
+  meController.getConsultant,
+);
+
 export default router;

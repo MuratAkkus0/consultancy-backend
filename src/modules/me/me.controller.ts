@@ -6,6 +6,7 @@ import type { PaginationParams } from "../../lib/validators.js";
 import { coursesService } from "../courses/courses.service.js";
 import { paymentsService } from "../payments/payments.service.js";
 import type { StudentPaymentQuery } from "../payments/payments.types.js";
+import { assignmentsService } from "../assignments/assignments.service.js";
 
 export const meController = {
   getProfile: async (req: Request, res: Response, next: NextFunction) => {
@@ -58,6 +59,34 @@ export const meController = {
         data,
         pagination: { page: params.page, limit: params.limit, total },
       });
+    } catch (err) {
+      next(err);
+    }
+  },
+  getAssignments: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.user! as User;
+      const { page, limit } = req.query as unknown as PaginationParams;
+
+      const { data, total } = await assignmentsService.getStudentsForConsultant(
+        id,
+        page,
+        limit,
+      );
+
+      res.json({
+        data,
+        pagination: { page, limit, total },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+  getConsultant: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.user! as User;
+      const consultant = await assignmentsService.getConsultantForStudent(id);
+      res.json(consultant ?? null);
     } catch (err) {
       next(err);
     }

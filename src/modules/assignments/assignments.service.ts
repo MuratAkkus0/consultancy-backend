@@ -6,8 +6,9 @@ import type {
   AssignStudentToConsultantDTO,
   StudentEditAssignmentDTO,
 } from "./assignments.types.js";
-import { and, eq, getTableColumns, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { consultantProfilesTable, users } from "../../db/index.js";
+import { userBaseColumns, userIdentityColumns } from "../../db/selections.js";
 
 export const assignmentsService = {
   editByIdForStudent: async (id: string, data: StudentEditAssignmentDTO) => {
@@ -104,70 +105,66 @@ export const assignmentsService = {
     return result;
   },
   getConsultantForStudent: async (id: string) => {
-    const {
-      updatedAt,
-      createdAt,
-      role,
-      emailVerified,
-      ...filteredUserColumns
-    } = getTableColumns(users);
+    const activeUserIds = db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.status, "active"));
 
-    const consultants = await db
-      .select({
-        id: consultantAssignmentsTable.id,
-        consultantId: consultantAssignmentsTable.consultantId,
-        studentId: consultantAssignmentsTable.studentId,
-        assignedAt: consultantAssignmentsTable.createdAt,
-        consultant: filteredUserColumns,
-      })
-      .from(consultantAssignmentsTable)
-      .innerJoin(
-        users,
-        and(eq(users.id, consultantAssignmentsTable.consultantId)),
-      )
-      .where(
-        and(
-          eq(consultantAssignmentsTable.studentId, id),
-          isNull(consultantAssignmentsTable.deletedAt),
-        ),
-      );
+    const where = and(
+      eq(consultantAssignmentsTable.studentId, id),
+      isNull(consultantAssignmentsTable.deletedAt),
+      inArray(consultantAssignmentsTable.consultantId, activeUserIds),
+    );
 
-    return consultants;
+    const consultant = await db.query.consultantAssignmentsTable.findFirst({
+      where,
+      columns: {
+        id: true,
+        consultantId: true,
+        studentId: true,
+        createdAt: true,
+      },
+      with: {
+        consultant: {
+          columns: userBaseColumns,
+        },
+      },
+    });
+
+    return consultant;
   },
-  getStudentsForConsultant: async (id: string) => {
-    const {
-      updatedAt,
-      createdAt,
-      status,
-      role,
-      emailVerified,
-      ...filteredUserColumns
-    } = getTableColumns(users);
+  getStudentsForConsultant: async (id: string, page: number, limit: number) => {
+    const offset = (page - 1) * limit;
 
-    const students = await db
-      .select({
-        id: consultantAssignmentsTable.id,
-        consultantId: consultantAssignmentsTable.consultantId,
-        studentId: consultantAssignmentsTable.studentId,
-        assignedAt: consultantAssignmentsTable.createdAt,
-        student: filteredUserColumns,
-      })
-      .from(consultantAssignmentsTable)
-      .innerJoin(
-        users,
-        and(
-          eq(users.id, consultantAssignmentsTable.studentId),
-          eq(users.status, "active"),
-        ),
-      )
-      .where(
-        and(
-          eq(consultantAssignmentsTable.consultantId, id),
-          isNull(consultantAssignmentsTable.deletedAt),
-        ),
-      );
+    const activeUserIds = db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.status, "active"));
 
-    return students;
+    const where = and(
+      eq(consultantAssignmentsTable.consultantId, id),
+      isNull(consultantAssignmentsTable.deletedAt),
+      inArray(consultantAssignmentsTable.studentId, activeUserIds),
+    );
+
+    const [data, total] = await Promise.all([
+      db.query.consultantAssignmentsTable.findMany({
+        offset,
+        limit,
+        where,
+        orderBy: (t, { desc }) => [desc(t.createdAt)],
+        columns: {
+          id: true,
+          consultantId: true,
+          studentId: true,
+          createdAt: true,
+        },
+        with: { student: { columns: userIdentityColumns } },
+      }),
+      db.$count(consultantAssignmentsTable, where),
+    ]);
+
+    return { data, total };
   },
   getStudentConsultantsForAdmin: async (id: string) => {
     const consultants = await db.query.consultantAssignmentsTable.findMany({

@@ -26,7 +26,7 @@ registerRoute({
 router.get(
   "/",
   requireAuth,
-  requireRole("admin", "consultant"),
+  requireRole("admin"),
   validateQuery(paginationSchema),
   studentsController.list,
 );

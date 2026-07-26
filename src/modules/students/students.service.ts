@@ -1,20 +1,24 @@
-import { db, studentProfilesTable } from "../../db/index.js";
+import { and, eq } from "drizzle-orm";
+import { db, users } from "../../db/index.js";
 import { userIdentityColumns } from "../../db/selections.js";
 
 export const studentsService = {
   list: async (page: number, limit: number) => {
     const offset = (page - 1) * limit;
 
+    const where = and(eq(users.status, "active"), eq(users.role, "student"));
+
     const [data, total] = await Promise.all([
-      db.query.studentProfilesTable.findMany({
+      db.query.users.findMany({
         limit,
         offset,
-        orderBy: (profiles, { desc }) => [desc(profiles.createdAt)],
+        orderBy: (table, { desc }) => [desc(table.createdAt)],
+        where,
         with: {
-          user: { columns: userIdentityColumns },
+          studentProfile: true,
         },
       }),
-      db.$count(studentProfilesTable),
+      db.$count(users, where),
     ]);
 
     return { data, total };
