@@ -16,6 +16,8 @@ import coursesRoutes from "./modules/courses/courses.routes.js";
 import paymentsRoutes from "./modules/payments/payments.routes.js";
 import applicationsRoutes from "./modules/applications/applications.routes.js";
 import appointmentsRoutes from "./modules/appointments/appointments.routes.js";
+
+import documentTypesRoutes from "./modules/document_types/document_types.routes.js";
 import meRoutes from "./modules/me/me.routes.js";
 import createHttpError from "http-errors";
 import { z } from "zod";
@@ -117,6 +119,7 @@ app.use("/api/v1/courses", coursesRoutes);
 app.use("/api/v1/payments", paymentsRoutes);
 app.use("/api/v1/applications", applicationsRoutes);
 app.use("/api/v1/appointments", appointmentsRoutes);
+app.use("/api/v1/document-types", documentTypesRoutes);
 app.use("/api/v1/me", meRoutes);
 
 // 404 Handler
