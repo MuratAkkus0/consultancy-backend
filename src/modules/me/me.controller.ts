@@ -11,6 +11,12 @@ import type { StudentApplicationQuery } from "../applications/applications.types
 import { appointmentsService } from "../appointments/appointments.service.js";
 import type { StudentAppointmentQuery } from "../appointments/appointments.types.js";
 import { assignmentsService } from "../assignments/assignments.service.js";
+import { documentsService } from "../documents/documents.service.js";
+import type {
+  CreateDocumentDTO,
+  MyDocumentQuery,
+} from "../documents/documents.types.js";
+import type { UuidParam } from "../../lib/validators.js";
 
 export const meController = {
   getProfile: async (req: Request, res: Response, next: NextFunction) => {
@@ -123,6 +129,72 @@ export const meController = {
       const { id } = req.user! as User;
       const consultant = await assignmentsService.getConsultantForStudent(id);
       res.json(consultant ?? null);
+    } catch (err) {
+      next(err);
+    }
+  },
+  createDocument: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.user! as User;
+      const data = req.body as unknown as CreateDocumentDTO;
+      const result = await documentsService.createForStudent(id, data);
+      res.status(201).json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+  confirmDocument: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id: userId } = req.user! as User;
+      const { id } = req.params as unknown as UuidParam;
+      const document = await documentsService.confirmUploadForStudent(
+        userId,
+        id,
+      );
+      res.json(document);
+    } catch (err) {
+      next(err);
+    }
+  },
+  getDocuments: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.user! as User;
+      const params = req.query as unknown as MyDocumentQuery;
+      const { data, total } = await documentsService.listForStudent(id, params);
+      res.json({
+        data,
+        pagination: { page: params.page, limit: params.limit, total },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+  getDocumentDownloadUrl: async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { id: userId } = req.user! as User;
+      const { id } = req.params as unknown as UuidParam;
+      const result = await documentsService.getDownloadUrlForStudent(
+        userId,
+        id,
+      );
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+  deleteDocument: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id: userId } = req.user! as User;
+      const { id } = req.params as unknown as UuidParam;
+      const document = await documentsService.softDeleteByIdForStudent(
+        userId,
+        id,
+      );
+      res.json(document);
     } catch (err) {
       next(err);
     }

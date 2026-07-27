@@ -14,3 +14,4 @@ export * from "./payments.js";
 export * from "./applications.js";
 export * from "./appointments.js";
 export * from "./document_types.js";
+export * from "./documents.js";

@@ -2,7 +2,9 @@ import { Router } from "express";
 import { requireAuth } from "../../middleware/auth.middleware.js";
 import { meController } from "./me.controller.js";
 import {
+  validateBody,
   validateBodyByRole,
+  validateParams,
   validateQuery,
 } from "../../middleware/validate.middleware.js";
 import {
@@ -10,7 +12,11 @@ import {
   editConsultantSelfSchema,
   editStudentSelfSchema,
 } from "./me.validators.js";
-import { paginationSchema } from "../../lib/validators.js";
+import { paginationSchema, uuidParamSchema } from "../../lib/validators.js";
+import {
+  createDocumentSchema,
+  myDocumentQuerySchema,
+} from "../documents/documents.validators.js";
 import { requireRole } from "../../middleware/role.middleware.js";
 import { studentPaymentQuerySchema } from "../payments/payments.validators.js";
 import { studentApplicationQuerySchema } from "../applications/applications.validators.js";
@@ -199,6 +205,129 @@ router.get(
   requireAuth,
   requireRole("student"),
   meController.getConsultant,
+);
+
+// Create an upload intent. The file itself never touches this API: the
+// student declares the metadata, gets back the pending document record plus
+// a short-lived presigned URL, and PUTs the file directly to S3.
+registerRoute({
+  method: "post",
+  path: "/api/v1/me/documents",
+  tags: ["Me"],
+  summary: "Start a document upload",
+  description:
+    "Declares a file (name, type, mime, size) and returns { document, uploadUrl }. The client PUTs the file to uploadUrl (with the same Content-Type) and then confirms. The record stays 'pending' until confirmed.",
+  request: { body: createDocumentSchema },
+  responses: {
+    201: { description: "{ document, uploadUrl }" },
+    400: { description: "Validation error" },
+    404: { description: "Document type not found" },
+    403: { description: "Student role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.post(
+  "/documents",
+  requireAuth,
+  requireRole("student"),
+  validateBody(createDocumentSchema),
+  meController.createDocument,
+);
+
+// Confirm that the upload to S3 succeeded. Verified against S3 itself.
+registerRoute({
+  method: "post",
+  path: "/api/v1/me/documents/:id/confirm",
+  tags: ["Me"],
+  summary: "Confirm a document upload",
+  description:
+    "Marks the document as uploaded after verifying the object actually exists in storage. Idempotent: confirming an already-uploaded document is a no-op.",
+  request: { params: uuidParamSchema },
+  responses: {
+    200: { description: "The confirmed document" },
+    404: { description: "Document not found" },
+    409: { description: "The file has not been uploaded yet" },
+    403: { description: "Student role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.post(
+  "/documents/:id/confirm",
+  requireAuth,
+  requireRole("student"),
+  validateParams(uuidParamSchema),
+  meController.confirmDocument,
+);
+
+// List the authenticated student's own documents (pending ones included).
+registerRoute({
+  method: "get",
+  path: "/api/v1/me/documents",
+  tags: ["Me"],
+  summary: "List my documents",
+  description:
+    "All of the student's own non-deleted documents, including pending (unfinished) uploads. Optionally filter by documentTypeId.",
+  request: { query: myDocumentQuerySchema },
+  responses: {
+    200: { description: "The authenticated student's documents" },
+    403: { description: "Student role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.get(
+  "/documents",
+  requireAuth,
+  requireRole("student"),
+  validateQuery(myDocumentQuerySchema),
+  meController.getDocuments,
+);
+
+// Get a short-lived download URL for one of the student's own documents.
+registerRoute({
+  method: "get",
+  path: "/api/v1/me/documents/:id/download-url",
+  tags: ["Me"],
+  summary: "Get a download URL for my document",
+  description:
+    "Returns a short-lived presigned URL. Only uploaded documents are downloadable.",
+  request: { params: uuidParamSchema },
+  responses: {
+    200: { description: "{ url } — expires in a few minutes" },
+    404: { description: "Document not found" },
+    403: { description: "Student role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.get(
+  "/documents/:id/download-url",
+  requireAuth,
+  requireRole("student"),
+  validateParams(uuidParamSchema),
+  meController.getDocumentDownloadUrl,
+);
+
+// Soft-delete one of the student's own documents.
+registerRoute({
+  method: "delete",
+  path: "/api/v1/me/documents/:id",
+  tags: ["Me"],
+  summary: "Delete my document",
+  description:
+    "Soft delete: the record is hidden, the stored file is kept. Works on pending uploads too, so an abandoned intent can be cleaned up by its owner.",
+  request: { params: uuidParamSchema },
+  responses: {
+    200: { description: "The deleted document" },
+    404: { description: "Document not found" },
+    403: { description: "Student role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.delete(
+  "/documents/:id",
+  requireAuth,
+  requireRole("student"),
+  validateParams(uuidParamSchema),
+  meController.deleteDocument,
 );
 
 export default router;

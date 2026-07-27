@@ -15,6 +15,13 @@ export const config = {
     trustedProxyHops: env.TRUSTED_PROXY_HOPS,
   },
 
+  s3: {
+    region: env.AWS_REGION,
+    bucket: env.AWS_STUDENT_DOCUMENTS_BUCKET_NAME,
+    accessKeyId: env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+  },
+
   db: {
     url: env.DATABASE_URL,
     poolMin: 2,

@@ -5,14 +5,18 @@ import { z } from "zod";
  * When you add a new environment variable, add it here as well. Otherwise, type safety will be lost.
  */
 const EnvSchema = z.object({
-  NODE_ENV: z
-    .enum(["development", "test", "production"])
-    .default("development"),
+  NODE_ENV: z.enum(["development", "test", "production"]).default("production"),
 
   APP_PORT: z.coerce.number().int().positive().default(3001),
 
   // DATABASE_URL — Postgres connection string
   DATABASE_URL: z.url(),
+
+  // AWS
+  AWS_STUDENT_DOCUMENTS_BUCKET_NAME: z.string(),
+  AWS_REGION: z.string(),
+  AWS_ACCESS_KEY_ID: z.string(),
+  AWS_SECRET_ACCESS_KEY: z.string(),
 
   // SEED
   SEED_ADMIN_EMAIL: z.string().optional(),
