@@ -41,6 +41,27 @@ export const meController = {
       next(err);
     }
   },
+
+  softDeleteMe: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id, role } = req.user!;
+      const user = await meService.softDeleteById(id, role as UserRole);
+      res.json(user);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  hardDeleteMe: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id, role } = req.user!;
+      const user = await meService.hardDeleteById(id, role as UserRole);
+      res.json(user);
+    } catch (err) {
+      next(err);
+    }
+  },
+
   getCourses: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id, role } = req.user! as User;

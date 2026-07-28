@@ -72,6 +72,55 @@ router.patch(
   meController.editProfile,
 );
 
+// Close the authenticated user's own account. Deactivates the account, ends
+// all sessions and removes the user's uploaded documents. Identity fields
+// (email, phone) are retained; the account cannot be used until reactivated.
+registerRoute({
+  method: "delete",
+  path: "/api/v1/me",
+  tags: ["Me"],
+  summary: "Close my account",
+  description:
+    "Deactivates the authenticated student's account (status becomes inactive), ends all sessions and removes their uploaded documents. Contact details are retained.",
+  responses: {
+    200: { description: "The deactivated user" },
+    404: { description: "User not found" },
+    403: { description: "Student role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.delete(
+  "/",
+  requireAuth,
+  requireRole("student"),
+  meController.softDeleteMe,
+);
+
+// Permanently delete the authenticated user's account (GDPR erasure).
+// Anonymizes personal data, destroys credentials and sessions, and deletes
+// the user's documents and role profile. Irreversible; records that must be
+// retained (e.g. payments) are kept in anonymized form.
+registerRoute({
+  method: "delete",
+  path: "/api/v1/me/permanent",
+  tags: ["Me"],
+  summary: "Permanently delete my account (GDPR)",
+  description:
+    "Erases the authenticated student's personal data: the user is anonymized, credentials and sessions are destroyed, and documents and the student profile are deleted. Irreversible.",
+  responses: {
+    200: { description: "The anonymized user" },
+    404: { description: "User not found" },
+    403: { description: "Student role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.delete(
+  "/permanent",
+  requireAuth,
+  requireRole("student"),
+  meController.hardDeleteMe,
+);
+
 // Get the authenticated user's own courses
 registerRoute({
   method: "get",
