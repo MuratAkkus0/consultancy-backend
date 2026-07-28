@@ -36,7 +36,7 @@ export const storage = {
     const getCommand = new GetObjectCommand({
       Bucket: config.s3.bucket,
       Key: key,
-      ResponseContentDisposition: create(fileName),
+      ResponseContentDisposition: create(fileName, { type: "inline" }),
     });
 
     return await getSignedUrl(s3Client, getCommand, {
