@@ -5,12 +5,14 @@ export const assignStudentToConsultantSchema = z.object({
   studentId: z.uuid(),
   studentFeedback: z.string().trim().optional(),
   adminNotes: z.string().trim().optional(),
+  consultantNotes: z.array(z.string().trim()).optional(),
 });
 
 export const adminEditAssignmentSchema = z
   .object({
     studentFeedback: z.string().trim(),
     adminNotes: z.string().trim(),
+    consultantNotes: z.array(z.string().trim()).optional(),
   })
   .partial()
   .refine((data) => Object.keys(data).length > 0, {

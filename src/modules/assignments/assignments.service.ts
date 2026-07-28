@@ -178,6 +178,7 @@ export const assignmentsService = {
           consultantId: true,
           studentId: true,
           createdAt: true,
+          consultantNotes: true,
         },
         with: { student: { columns: userIdentityColumns } },
       }),

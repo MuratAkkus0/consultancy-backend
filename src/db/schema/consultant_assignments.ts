@@ -15,6 +15,7 @@ export const consultantAssignmentsTable = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     studentFeedback: text("student_feedback"),
     adminNotes: text("admin_notes"),
+    consultantNotes: text("consultant_notes").array().default([]),
     ...timestamps,
   },
   (t) => [
