@@ -91,6 +91,12 @@ const toResponse = <T extends { documentKey: string }>(document: T) => {
   return rest;
 };
 
+const FILE_EXT_BY_MIME = {
+  "application/pdf": "pdf",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+} as const;
+
 export const documentsService = {
   // Step 1 of the upload flow: validate the intent, create the row as
   // "pending" and hand back a short-lived URL the client PUTs the file to.
@@ -99,7 +105,7 @@ export const documentsService = {
   createForStudent: async (studentId: string, data: CreateDocumentDTO) => {
     const { code } = await assertDocumentType(data.documentTypeId);
 
-    const documentKey = `private/students/${studentId}/documents/${code}-${randomUUID()}`;
+    const documentKey = `private/students/${studentId}/documents/${code}-${randomUUID()}.${FILE_EXT_BY_MIME[data.mimeType]}`;
 
     const [document] = await db
       .insert(documentsTable)
