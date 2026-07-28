@@ -1,11 +1,13 @@
 import z from "zod";
 import { paginationSchema } from "../../lib/validators.js";
+import { appointmentTypeEnum } from "../../db/index.js";
 
 // The appointment's own descriptive fields (everything except identity/ownership
 // columns id/studentId/consultantId, which are never edited through the body).
 const appointmentFields = {
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().max(1000),
+  appointmentType: z.enum(appointmentTypeEnum.enumValues),
   meetingLink: z.url(),
   // Full date AND time (ISO datetime, e.g. "2026-08-01T14:30:00Z").
   scheduledAt: z.coerce.date(),
@@ -23,6 +25,7 @@ export const consultantCreateAppointmentSchema = z.object({
   scheduledAt: appointmentFields.scheduledAt,
   durationMinutes: appointmentFields.durationMinutes.default(30),
   description: appointmentFields.description.optional(),
+  appointmentType: z.enum(appointmentTypeEnum.enumValues),
   meetingLink: appointmentFields.meetingLink.optional(),
 });
 

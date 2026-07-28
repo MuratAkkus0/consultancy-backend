@@ -1,6 +1,7 @@
 import {
   index,
   integer,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -11,6 +12,11 @@ import {
 import { users } from "./auth.js";
 import { timestamps } from "./_shared.js";
 import { relations, sql } from "drizzle-orm";
+
+export const appointmentTypeEnum = pgEnum("appointment_type", [
+  "online",
+  "face_to_face",
+]);
 
 export const appointmentsTable = pgTable(
   "appointments",
@@ -24,6 +30,7 @@ export const appointmentsTable = pgTable(
       .references(() => users.id),
     title: varchar("title", { length: 200 }).notNull(),
     description: text("description"),
+    appointmentType: appointmentTypeEnum("appointment_type").notNull(),
     meetingLink: text("meeting_link"),
     // Full date AND time of the meeting.
     scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
