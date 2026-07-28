@@ -35,4 +35,40 @@ export const studentsController = {
       next(err);
     }
   },
+  softDeleteById: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params as unknown as UuidParam;
+      const result = await studentsService.softDeleteById(id);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+  hardDeleteById: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params as unknown as UuidParam;
+      const result = await studentsService.hardDeleteById(id);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+  inactivateById: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params as unknown as UuidParam;
+      const result = await studentsService.inactivateById(id);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+  activateById: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params as unknown as UuidParam;
+      const result = await studentsService.activateById(id);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
 };

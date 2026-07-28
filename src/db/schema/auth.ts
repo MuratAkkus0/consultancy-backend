@@ -27,6 +27,7 @@ export const userRoleEnum = pgEnum("user_role", [
 export const userStatusEnum = pgEnum("user_status", [
   "active",
   "inactive",
+  "soft_deleted",
   "deleted",
 ]);
 

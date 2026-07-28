@@ -43,7 +43,13 @@ export const anonymizeUser = async (userId: string, userRole: UserRole) => {
         birthDate: null,
         status: "deleted",
       })
-      .where(and(eq(users.id, userId), ne(users.status, "deleted")))
+      .where(
+        and(
+          eq(users.id, userId),
+          eq(users.role, userRole),
+          ne(users.status, "deleted"),
+        ),
+      )
       .returning();
 
     if (!user) {
@@ -73,6 +79,64 @@ export const anonymizeUser = async (userId: string, userRole: UserRole) => {
     }
 
     return user;
+  });
+};
+
+// Account closure (recoverable). Mirrors anonymizeUser, but keeps identity
+// (email/phone stay on the user row) and only marks things deleted instead of
+// scrubbing them: status -> soft_deleted, sessions dropped, documents removed
+// and queued for S3 cleanup, and the role profile is soft-deleted (a student
+// also has its passport number cleared). No admin branch: closure is only for
+// students and consultants, exactly like anonymizeUser.
+export const softDeleteUser = async (userId: string, userRole: UserRole) => {
+  return await db.transaction(async (tx) => {
+    const [user] = await tx
+      .update(users)
+      .set({ status: "soft_deleted" })
+      .where(
+        and(
+          eq(users.id, userId),
+          eq(users.role, userRole),
+          ne(users.status, "deleted"),
+          ne(users.status, "soft_deleted"),
+        ),
+      )
+      .returning();
+
+    if (!user) {
+      throw createHttpError(404, "User not found.");
+    }
+
+    await tx.delete(sessions).where(eq(sessions.userId, userId));
+
+    const documents = await tx
+      .delete(documentsTable)
+      .where(eq(documentsTable.studentId, userId))
+      .returning({ documentKey: documentsTable.documentKey });
+
+    const keys = documents.map((doc) => doc.documentKey);
+    await addS3DocumentsToDeletionQueue(keys, tx);
+
+    let profile:
+      | typeof studentProfilesTable.$inferSelect
+      | typeof consultantProfilesTable.$inferSelect
+      | undefined;
+
+    if (userRole === "student") {
+      [profile] = await tx
+        .update(studentProfilesTable)
+        .set({ passportNumber: null, deletedAt: new Date() })
+        .where(eq(studentProfilesTable.userId, userId))
+        .returning();
+    } else if (userRole === "consultant") {
+      [profile] = await tx
+        .update(consultantProfilesTable)
+        .set({ deletedAt: new Date() })
+        .where(eq(consultantProfilesTable.userId, userId))
+        .returning();
+    }
+
+    return { user, profile };
   });
 };
 

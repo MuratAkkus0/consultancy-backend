@@ -7,6 +7,7 @@ import type {
 } from "./consultants.types.js";
 import { and, eq, isNull, ne } from "drizzle-orm";
 import createHttpError from "http-errors";
+import { anonymizeUser, softDeleteUser } from "../../lib/service-helpers.js";
 
 export const consultantsService = {
   create: async (data: CreateConsultantDTO) => {
@@ -54,7 +55,12 @@ export const consultantsService = {
         with: {
           consultantProfile: true,
         },
-        where: (table, { eq }) => eq(table.role, "consultant"),
+        where: (table, { eq, and }) =>
+          and(
+            eq(table.role, "consultant"),
+            ne(table.status, "deleted"),
+            ne(table.status, "soft_deleted"),
+          ),
       }),
       db.$count(consultantProfilesTable),
     ]);
@@ -112,7 +118,12 @@ export const consultantsService = {
   },
   getById: async (id: string) => {
     const user = await db.query.users.findFirst({
-      where: (table, { eq }) => eq(table.id, id),
+      where: (table, { eq, and }) =>
+        and(
+          eq(table.id, id),
+          ne(table.status, "deleted"),
+          ne(table.status, "soft_deleted"),
+        ),
       with: {
         consultantProfile: true,
       },
@@ -125,53 +136,11 @@ export const consultantsService = {
     return user;
   },
   softDeleteById: async (id: string) => {
-    const result = await db.transaction(async (tx) => {
-      const user = await tx.query.users.findFirst({
-        where: (table, { eq, and, ne }) =>
-          and(eq(table.id, id), ne(table.status, "deleted")),
-        with: {
-          consultantProfile: true,
-        },
-      });
-
-      if (!user || user?.role !== "consultant") {
-        throw createHttpError(404, "User not found.");
-      }
-
-      const [deletedConsultant] = await tx
-        .update(users)
-        .set({ status: "deleted" })
-        .where(and(eq(users.id, id), ne(users.status, "deleted")))
-        .returning();
-
-      const [deletedConsultantProfile] = await tx
-        .update(consultantProfilesTable)
-        .set({ deletedAt: new Date() })
-        .where(
-          and(
-            eq(consultantProfilesTable.userId, id),
-            isNull(consultantProfilesTable.deletedAt),
-          ),
-        )
-        .returning();
-
-      return { ...deletedConsultantProfile, user: deletedConsultant };
-    });
-    return result;
+    return await softDeleteUser(id, "consultant");
   },
   hardDeleteById: async (id: string) => {
-    const user = await db.query.users.findFirst({
-      where: (table, { eq }) => eq(table.id, id),
-    });
+    const deletedUser = await anonymizeUser(id, "consultant");
 
-    if (!user || user?.role !== "consultant") {
-      throw createHttpError(404, "User not found.");
-    }
-
-    const [deletedUser] = await db
-      .delete(users)
-      .where(eq(users.id, user.id))
-      .returning();
     return deletedUser;
   },
   inactivateById: async (id: string) => {
