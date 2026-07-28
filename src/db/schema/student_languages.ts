@@ -15,8 +15,12 @@ export const languageLevel = pgEnum("language_level", [
 export const studentLanguagesTable = pgTable(
   "student_languages",
   {
-    studenProfileId: uuid("student_id").notNull(),
-    languageId: uuid("language_id").notNull(),
+    studenProfileId: uuid("student_id")
+      .notNull()
+      .references(() => studentProfilesTable.id, { onDelete: "cascade" }),
+    languageId: uuid("language_id")
+      .notNull()
+      .references(() => languagesTable.id, { onDelete: "cascade" }),
     level: languageLevel(),
     certificates: text("certificates").array().default([]),
   },
