@@ -15,3 +15,4 @@ export * from "./applications.js";
 export * from "./appointments.js";
 export * from "./document_types.js";
 export * from "./documents.js";
+export * from "./s3_deletion_queues.js";
