@@ -34,7 +34,10 @@ export const consultantEditCourseSchema = z
     meetingLink: z.url(),
     consultantNotes: z.string().trim(),
   })
-  .partial();
+  .partial()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field must be provided.",
+  });
 
 export const enrollStudentSchema = z.object({
   studentId: z.uuid(),
