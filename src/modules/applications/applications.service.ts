@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import createHttpError from "http-errors";
-import { applicationsTable, db } from "../../db/index.js";
+import { applicationsTable, db, type DbExecutor } from "../../db/index.js";
 import { userBaseColumns, userIdentityColumns } from "../../db/selections.js";
 import type {
   ApplicationQuery,
@@ -10,12 +10,6 @@ import type {
   EditApplicationDTO,
   StudentApplicationQuery,
 } from "./applications.types.js";
-
-// Either the root db or a transaction handle, so a caller (e.g. the assignments
-// module) can run an operation inside its own transaction.
-type DbExecutor =
-  | typeof db
-  | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 // Ensures the given id belongs to an active consultant, otherwise 404.
 const assertActiveConsultant = async (consultantId: string) => {

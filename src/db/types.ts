@@ -14,6 +14,11 @@ import type {
   applicationsTable,
   applicationStatusEnum,
 } from "./schema/applications.js";
+import type { db } from "./db.js";
+
+export type DbExecutor =
+  | typeof db
+  | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 // Language
 export type LanguageLevel = (typeof languageLevel.enumValues)[number];
