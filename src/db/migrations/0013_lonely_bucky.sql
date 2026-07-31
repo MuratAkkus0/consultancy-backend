@@ -1,0 +1,1 @@
+ALTER TABLE "student_languages" ALTER COLUMN "level" SET NOT NULL;
