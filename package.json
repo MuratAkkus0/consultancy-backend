@@ -28,6 +28,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file=.env scripts/migrate.ts",
     "seed:admin": "tsx --env-file=.env scripts/seed-admin.ts",
+    "seed:languages": "tsx --env-file=.env scripts/seed-languages.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },
