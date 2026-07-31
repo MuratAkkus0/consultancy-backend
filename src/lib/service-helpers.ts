@@ -22,17 +22,25 @@ export function assertUserWithRole(
   return user;
 }
 
-export const isUniqueViolation = (err: unknown): boolean => {
+// Drizzle wraps the pg DatabaseError in DrizzleQueryError; the original error
+// (with its Postgres code) is kept on `cause`, so walk the chain.
+const hasPgErrorCode = (err: unknown, code: string): boolean => {
   if (typeof err !== "object" || err === null) {
     return false;
   }
-  if ("code" in err && err.code === "23505") {
+  if ("code" in err && err.code === code) {
     return true;
   }
-  // Drizzle wraps the pg DatabaseError in DrizzleQueryError; the original
-  // error (with its Postgres code) is kept on `cause`.
-  return "cause" in err && isUniqueViolation(err.cause);
+  return "cause" in err && hasPgErrorCode(err.cause, code);
 };
+
+// 23505 unique_violation
+export const isUniqueViolation = (err: unknown): boolean =>
+  hasPgErrorCode(err, "23505");
+
+// 23503 foreign_key_violation (e.g. a languageId/countryId that doesn't exist)
+export const isForeignKeyViolation = (err: unknown): boolean =>
+  hasPgErrorCode(err, "23503");
 
 export const anonymizeUser = async (userId: string, userRole: UserRole) => {
   return await db.transaction(async (tx) => {

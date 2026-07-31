@@ -1,5 +1,9 @@
 import z from "zod";
-import { educationLevelEnum, targetProgramSchema } from "../../db/index.js";
+import {
+  educationLevelEnum,
+  languageLevelEnum,
+  targetProgramSchema,
+} from "../../db/index.js";
 
 export const createOnboardingSchema = z.object({
   nationality: z.string(),
@@ -12,6 +16,32 @@ export const createOnboardingSchema = z.object({
   graduationYear: z.int().optional(),
   gpa: z.coerce.number().min(0).max(4).multipleOf(0.01).optional(),
   targetPrograms: z.array(targetProgramSchema).default([]),
+  languages: z
+    .array(
+      z.object({
+        languageId: z.uuid(),
+        level: z.enum(languageLevelEnum.enumValues),
+        certificates: z.array(z.string()).default([]),
+      }),
+    )
+    .default([])
+    .refine(
+      (arr) => new Set(arr.map((l) => l.languageId)).size === arr.length,
+      { message: "Duplicate language." },
+    ),
+  targetCountries: z
+    .array(
+      z.object({
+        countryId: z.uuid(),
+        priority: z.int().optional(),
+        notes: z.string().optional(),
+      }),
+    )
+    .default([])
+    .refine(
+      (arr) => new Set(arr.map((c) => c.countryId)).size === arr.length,
+      { message: "Duplicate country." },
+    ),
   targetEducationLevel: z.enum(educationLevelEnum.enumValues),
   preferedStartDate: z.iso.date().optional(),
   financeSource: z.string().optional(),

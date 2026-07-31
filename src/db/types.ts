@@ -5,7 +5,7 @@ import type {
   users,
   userStatusEnum,
 } from "./schema/auth.js";
-import type { languageLevel } from "./schema/student_languages.js";
+import type { languageLevelEnum } from "./schema/student_languages.js";
 import { educationLevelEnum } from "./schema/student_profiles.js";
 import type { consentTypeEnum } from "./schema/user_consents.js";
 import type { coursesTable } from "./schema/courses.js";
@@ -21,7 +21,7 @@ export type DbExecutor =
   | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 // Language
-export type LanguageLevel = (typeof languageLevel.enumValues)[number];
+export type LanguageLevel = (typeof languageLevelEnum.enumValues)[number];
 
 // User
 export type User = typeof users.$inferSelect;

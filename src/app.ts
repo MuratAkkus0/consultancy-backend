@@ -18,6 +18,8 @@ import applicationsRoutes from "./modules/applications/applications.routes.js";
 import appointmentsRoutes from "./modules/appointments/appointments.routes.js";
 import documentsRoutes from "./modules/documents/documents.routes.js";
 import documentTypesRoutes from "./modules/document_types/document_types.routes.js";
+import languagesRoutes from "./modules/languages/languages.routes.js";
+import countriesRoutes from "./modules/countries/countries.routes.js";
 import meRoutes from "./modules/me/me.routes.js";
 import createHttpError from "http-errors";
 import { z } from "zod";
@@ -121,6 +123,8 @@ app.use("/api/v1/applications", applicationsRoutes);
 app.use("/api/v1/appointments", appointmentsRoutes);
 app.use("/api/v1/documents", documentsRoutes);
 app.use("/api/v1/document-types", documentTypesRoutes);
+app.use("/api/v1/languages", languagesRoutes);
+app.use("/api/v1/countries", countriesRoutes);
 app.use("/api/v1/me", meRoutes);
 
 // 404 Handler

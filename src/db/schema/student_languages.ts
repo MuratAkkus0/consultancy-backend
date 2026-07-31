@@ -3,7 +3,7 @@ import { pgEnum, pgTable, primaryKey, text, uuid } from "drizzle-orm/pg-core";
 import { studentProfilesTable } from "./student_profiles.js";
 import { languagesTable } from "./languages.js";
 
-export const languageLevel = pgEnum("language_level", [
+export const languageLevelEnum = pgEnum("language_level", [
   "A1",
   "A2",
   "B1",
@@ -21,7 +21,7 @@ export const studentLanguagesTable = pgTable(
     languageId: uuid("language_id")
       .notNull()
       .references(() => languagesTable.id, { onDelete: "cascade" }),
-    level: languageLevel(),
+    level: languageLevelEnum().notNull(),
     certificates: text("certificates").array().default([]),
   },
   (t) => [primaryKey({ columns: [t.studenProfileId, t.languageId] })],
