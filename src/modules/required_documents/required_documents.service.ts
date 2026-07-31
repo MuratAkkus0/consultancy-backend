@@ -137,6 +137,12 @@ export const requiredDocumentsService = {
     return listWithFulfillment(params.studentId);
   },
 
+  // The student's own view (/me/required-documents): the id comes from the
+  // session, so it is inherently scoped to themselves.
+  listForStudent: async (studentId: string) => {
+    return listWithFulfillment(studentId);
+  },
+
   removeById: async (id: string) => {
     const [requirement] = await db
       .delete(studentRequiredDocumentsTable)

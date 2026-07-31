@@ -379,4 +379,27 @@ router.delete(
   meController.deleteDocument,
 );
 
+// List the documents the authenticated student is required to provide, each
+// with a `fulfilled` flag (true when they have an uploaded document of that
+// type) so the UI can show what is still missing.
+registerRoute({
+  method: "get",
+  path: "/api/v1/me/required-documents",
+  tags: ["Me"],
+  summary: "List my required documents",
+  description:
+    "The document types the student's consultant requires from them. Each item includes the document type, the consultant's note, and a `fulfilled` flag.",
+  responses: {
+    200: { description: "The authenticated student's required documents" },
+    403: { description: "Student role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.get(
+  "/required-documents",
+  requireAuth,
+  requireRole("student"),
+  meController.getRequiredDocuments,
+);
+
 export default router;

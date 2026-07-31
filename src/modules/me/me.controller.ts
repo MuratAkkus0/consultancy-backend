@@ -16,6 +16,7 @@ import type {
   CreateDocumentDTO,
   MyDocumentQuery,
 } from "../documents/documents.types.js";
+import { requiredDocumentsService } from "../required_documents/required_documents.service.js";
 import type { UuidParam } from "../../lib/validators.js";
 
 export const meController = {
@@ -216,6 +217,19 @@ export const meController = {
         id,
       );
       res.json(document);
+    } catch (err) {
+      next(err);
+    }
+  },
+  getRequiredDocuments: async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { id } = req.user! as User;
+      const data = await requiredDocumentsService.listForStudent(id);
+      res.json(data);
     } catch (err) {
       next(err);
     }
