@@ -137,13 +137,16 @@ S3 credentials are read from the standard AWS environment variables.
 
 `husky` runs lint on pre-commit and typecheck on pre-push; CI repeats both on every push.
 
-## Known gaps
+## Roadmap
 
-- **Test coverage is essentially absent.** `src/example.spec.ts` is a placeholder that asserts
-  `1 + 2 === 3`. The two things that most need real tests are the authorization rules — a
-  consultant must not reach a student who is not assigned to them, a student must not reach
-  another student's documents — and the appointment overlap guard under concurrency. Those
-  are the first things worth adding.
-- The S3 deletion worker exists (`src/modules/documents/s3_deletion_worker.service.ts`) but
-  nothing schedules it yet, so the queue currently fills without being drained.
-- Only the database is containerised; the API itself runs on the host.
+This project is still under active development. The following are planned rather than done:
+
+- **Test suite.** Vitest and supertest are already wired up. The first areas to cover are the
+  authorization rules — a consultant must not reach a student who is not assigned to them, a
+  student must not reach another student's documents — and the appointment overlap guard
+  under concurrency.
+- **Scheduling the S3 deletion worker.** The worker itself exists
+  (`src/modules/documents/s3_deletion_worker.service.ts`); it still needs to be run on a
+  schedule so the deletion queue is drained rather than only filled.
+- **Containerising the API.** Only the database is in `compose.yaml` today; the API runs on
+  the host.
