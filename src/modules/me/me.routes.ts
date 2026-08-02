@@ -22,6 +22,10 @@ import { studentPaymentQuerySchema } from "../payments/payments.validators.js";
 import { studentApplicationQuerySchema } from "../applications/applications.validators.js";
 import { studentAppointmentQuerySchema } from "../appointments/appointments.validators.js";
 import { registerRoute } from "../../lib/openapi.js";
+import {
+  consultantEditAssignmentSchema,
+  studentEditAssignmentSchema,
+} from "../assignments/assignments.validators.js";
 
 const router = Router();
 
@@ -233,6 +237,63 @@ router.get(
   requireRole("consultant"),
   validateQuery(paginationSchema),
   meController.getAssignments,
+);
+
+// The authenticated student sets their feedback on their own active
+// assignment (there is only one, so no id is needed — it comes from the session).
+registerRoute({
+  method: "patch",
+  path: "/api/v1/me/assignments",
+  tags: ["Me"],
+  summary: "Update my feedback for my consultant",
+  description:
+    "Sets the authenticated student's feedback on their own active assignment.",
+  request: { body: studentEditAssignmentSchema },
+  responses: {
+    200: { description: "The updated assignment" },
+    400: { description: "Validation error" },
+    404: { description: "Assignment not found" },
+    403: { description: "Student role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.patch(
+  "/assignments",
+  requireAuth,
+  requireRole("student"),
+  validateBody(studentEditAssignmentSchema),
+  meController.updateStudentFeedback,
+);
+
+// The authenticated consultant replaces their notes on one of their assigned
+// students. Scoped by consultantId + studentId, so a consultant can only reach
+// a student actually assigned to them (otherwise 404).
+registerRoute({
+  method: "patch",
+  path: "/api/v1/me/assignments/{studentId}",
+  tags: ["Me"],
+  summary: "Update my notes on an assigned student",
+  description:
+    "Replaces the authenticated consultant's notes on the assignment for the given assigned student.",
+  request: {
+    params: uuidParamSchema,
+    body: consultantEditAssignmentSchema,
+  },
+  responses: {
+    200: { description: "The updated assignment" },
+    400: { description: "Validation error" },
+    404: { description: "Assignment not found" },
+    403: { description: "Consultant role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.patch(
+  "/assignments/:studentId",
+  requireAuth,
+  requireRole("consultant"),
+  validateParams(uuidParamSchema),
+  validateBody(consultantEditAssignmentSchema),
+  meController.updateConsultantNotes,
 );
 
 // Get the consultant assigned to the authenticated student

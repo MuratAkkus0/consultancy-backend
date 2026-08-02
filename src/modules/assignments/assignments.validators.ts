@@ -19,9 +19,12 @@ export const adminEditAssignmentSchema = z
     message: "At least one field must be provided.",
   });
 
+export const consultantEditAssignmentSchema = z.object({
+  consultantNotes: z.array(z.string().trim().min(1)),
+});
+
 export const studentEditAssignmentSchema = z.object({
-  studentId: z.uuid(),
-  studentFeedback: z.string().trim().optional(),
+  studentFeedback: z.string().trim().min(1),
 });
 
 export const assignmentQuerySchema = z.union([

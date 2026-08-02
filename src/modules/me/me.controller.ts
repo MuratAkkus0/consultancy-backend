@@ -18,6 +18,10 @@ import type {
 } from "../documents/documents.types.js";
 import { requiredDocumentsService } from "../required_documents/required_documents.service.js";
 import type { UuidParam } from "../../lib/validators.js";
+import type {
+  ConsultantEditAssignmentDTO,
+  StudentEditAssignmentDTO,
+} from "../assignments/assignments.types.js";
 
 export const meController = {
   getProfile: async (req: Request, res: Response, next: NextFunction) => {
@@ -142,6 +146,46 @@ export const meController = {
         data,
         pagination: { page, limit, total },
       });
+    } catch (err) {
+      next(err);
+    }
+  },
+  updateStudentFeedback: async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { id } = req.user! as User;
+      const data = req.body as StudentEditAssignmentDTO;
+
+      const assignment = await assignmentsService.editFeedbackForStudent(
+        id,
+        data,
+      );
+
+      res.json(assignment);
+    } catch (err) {
+      next(err);
+    }
+  },
+  updateConsultantNotes: async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { id: consultantId } = req.user! as User;
+      const { id: studentId } = req.params as UuidParam;
+      const data = req.body as ConsultantEditAssignmentDTO;
+
+      const assignment = await assignmentsService.editNotesForConsultant(
+        consultantId,
+        studentId,
+        data,
+      );
+
+      res.json(assignment);
     } catch (err) {
       next(err);
     }

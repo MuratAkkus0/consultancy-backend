@@ -4,6 +4,7 @@ import { consultantAssignmentsTable } from "../../db/schema/consultant_assignmen
 import type {
   AdminEditAssignmentDTO,
   AssignStudentToConsultantDTO,
+  ConsultantEditAssignmentDTO,
   StudentEditAssignmentDTO,
 } from "./assignments.types.js";
 import { and, eq, inArray, isNull } from "drizzle-orm";
@@ -13,8 +14,11 @@ import { appointmentsService } from "../appointments/appointments.service.js";
 import { userBaseColumns, userIdentityColumns } from "../../db/selections.js";
 
 export const assignmentsService = {
-  editByIdForStudent: async (id: string, data: StudentEditAssignmentDTO) => {
-    const { studentId, studentFeedback } = data;
+  editFeedbackForStudent: async (
+    studentId: string,
+    data: StudentEditAssignmentDTO,
+  ) => {
+    const { studentFeedback } = data;
 
     const [assignment] = await db
       .update(consultantAssignmentsTable)
@@ -22,7 +26,31 @@ export const assignmentsService = {
       .where(
         and(
           eq(consultantAssignmentsTable.studentId, studentId),
-          eq(consultantAssignmentsTable.id, id),
+          isNull(consultantAssignmentsTable.deletedAt),
+        ),
+      )
+      .returning();
+
+    if (!assignment) {
+      throw createHttpError(404, "Assignment not found.");
+    }
+
+    return assignment;
+  },
+  editNotesForConsultant: async (
+    consultantId: string,
+    studentId: string,
+    data: ConsultantEditAssignmentDTO,
+  ) => {
+    const { consultantNotes } = data;
+
+    const [assignment] = await db
+      .update(consultantAssignmentsTable)
+      .set({ consultantNotes })
+      .where(
+        and(
+          eq(consultantAssignmentsTable.studentId, studentId),
+          eq(consultantAssignmentsTable.consultantId, consultantId),
           isNull(consultantAssignmentsTable.deletedAt),
         ),
       )
