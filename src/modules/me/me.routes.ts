@@ -288,7 +288,7 @@ registerRoute({
   },
 });
 router.patch(
-  "/assignments/:studentId",
+  "/assignments/:id",
   requireAuth,
   requireRole("consultant"),
   validateParams(uuidParamSchema),
