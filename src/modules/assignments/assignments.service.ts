@@ -7,7 +7,7 @@ import type {
   ConsultantEditAssignmentDTO,
   StudentEditAssignmentDTO,
 } from "./assignments.types.js";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { consultantProfilesTable, users } from "../../db/index.js";
 import { applicationsService } from "../applications/applications.service.js";
 import { appointmentsService } from "../appointments/appointments.service.js";
@@ -46,7 +46,9 @@ export const assignmentsService = {
 
     const [assignment] = await db
       .update(consultantAssignmentsTable)
-      .set({ consultantNotes })
+      .set({
+        consultantNotes: sql`${consultantAssignmentsTable.consultantNotes} || ${sql.param(consultantNotes)}::text[]`,
+      })
       .where(
         and(
           eq(consultantAssignmentsTable.studentId, studentId),
