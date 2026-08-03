@@ -270,7 +270,7 @@ router.patch(
 // a student actually assigned to them (otherwise 404).
 registerRoute({
   method: "patch",
-  path: "/api/v1/me/assignments/{studentId}",
+  path: "/api/v1/me/assignments/:id",
   tags: ["Me"],
   summary: "Update my notes on an assigned student",
   description:
