@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, inArray, isNull, type SQL } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, type SQL } from "drizzle-orm";
 import createHttpError from "http-errors";
 import {
   consultantAssignmentsTable,
@@ -405,10 +405,13 @@ export const documentsService = {
     return toResponse(document);
   },
 
-  // A consultant may remove only a document THEY uploaded, and only for a
-  // student still assigned to them (e.g. cleaning up a wrong file). The
-  // uploadedById guard keeps the student's own uploads out of reach. Soft
-  // delete; the S3 object is kept.
+  // The currently-assigned consultant may remove any consultant-uploaded
+  // document in their student's area — their own or a previous consultant's,
+  // so document management follows a reassignment. The student's own uploads
+  // stay out of reach: uploadedById === studentId means a self-upload, so
+  // ne(uploadedById, studentId) keeps those 404 for a consultant. (Only
+  // students and consultants upload today, so "not the student's own" is
+  // exactly "a consultant's".) Soft delete; the S3 object is kept.
   softDeleteByIdForConsultant: async (consultantId: string, id: string) => {
     const [document] = await db
       .update(documentsTable)
@@ -416,7 +419,7 @@ export const documentsService = {
       .where(
         and(
           eq(documentsTable.id, id),
-          eq(documentsTable.uploadedById, consultantId),
+          ne(documentsTable.uploadedById, documentsTable.studentId),
           isNull(documentsTable.deletedAt),
           ownedByAssignedStudent(consultantId),
         ),
