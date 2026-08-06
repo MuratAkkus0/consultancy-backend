@@ -26,6 +26,12 @@ export const createDocumentSchema = z.object({
   sizeBytes: z.number().int().positive().max(MAX_DOCUMENT_SIZE_BYTES),
 });
 
+// A consultant uploads into a specific assigned student's area, so the target
+// student is named in the body (the /me variant takes it from the session).
+export const consultantCreateDocumentSchema = createDocumentSchema.extend({
+  studentId: z.uuid(),
+});
+
 // --- Review (consultant) ----------------------------------------------------
 // "pending" is deliberately not offered: it is the initial state, a review
 // decision can only move the document forward to accepted or rejected.

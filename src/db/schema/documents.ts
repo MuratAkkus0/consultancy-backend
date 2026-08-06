@@ -34,6 +34,12 @@ export const documentsTable = pgTable(
     studentId: uuid("student_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    // Who put this file into the student's area. Equals studentId for a
+    // self-upload; the consultant's id when a consultant uploads on the
+    // student's behalf. Provenance for audit and delete authorization.
+    uploadedById: uuid("uploaded_by_id")
+      .notNull()
+      .references(() => users.id),
     documentTypeId: uuid("document_type_id")
       .notNull()
       .references(() => documentTypesTable.id),

@@ -10,6 +10,7 @@ import { uuidParamSchema } from "../../lib/validators.js";
 import { registerRoute } from "../../lib/openapi.js";
 import { documentsController } from "./documents.controller.js";
 import {
+  consultantCreateDocumentSchema,
   documentQuerySchema,
   reviewDocumentSchema,
 } from "./documents.validators.js";
@@ -19,6 +20,59 @@ const router = Router();
 const AUTH_ERRORS = {
   401: { description: "Not authenticated" },
 } as const;
+
+// Start an upload into an assigned student's area - consultant only. Mirrors
+// the student's /me/documents intent: the file goes straight to S3 via the
+// returned presigned URL; the record stays "pending" until confirmed.
+registerRoute({
+  method: "post",
+  path: "/api/v1/documents",
+  tags: ["Documents"],
+  summary: "Upload a document for an assigned student",
+  description:
+    "A consultant declares a file (studentId, type, name, mime, size) for a student actively assigned to them and gets back { document, uploadUrl }. The client PUTs the file to uploadUrl and then confirms. Unassigned or unknown students are a 404.",
+  request: { body: consultantCreateDocumentSchema },
+  responses: {
+    201: { description: "{ document, uploadUrl }" },
+    400: { description: "Validation error" },
+    403: { description: "Consultant role required" },
+    404: { description: "Student or document type not found" },
+    ...AUTH_ERRORS,
+  },
+});
+router.post(
+  "/",
+  requireAuth,
+  requireRole("consultant"),
+  validateBody(consultantCreateDocumentSchema),
+  documentsController.create,
+);
+
+// Confirm the upload to S3 succeeded - consultant only, scoped to their own
+// students' documents. Verified against S3; idempotent.
+registerRoute({
+  method: "post",
+  path: "/api/v1/documents/:id/confirm",
+  tags: ["Documents"],
+  summary: "Confirm a document upload",
+  description:
+    "Marks the document as uploaded after verifying the object exists in storage. Only documents of the consultant's own students are reachable. Idempotent.",
+  request: { params: uuidParamSchema },
+  responses: {
+    200: { description: "The confirmed document" },
+    404: { description: "Document not found" },
+    409: { description: "The file has not been uploaded yet" },
+    403: { description: "Consultant role required" },
+    ...AUTH_ERRORS,
+  },
+});
+router.post(
+  "/:id/confirm",
+  requireAuth,
+  requireRole("consultant"),
+  validateParams(uuidParamSchema),
+  documentsController.confirm,
+);
 
 // List a student's documents - admin sees all statuses; a consultant sees
 // only uploaded documents of students assigned to them.
@@ -95,17 +149,19 @@ router.patch(
   documentsController.reviewById,
 );
 
-// Soft-delete a document - admin only.
+// Soft-delete a document - admin (any document) or a consultant (only a
+// document they uploaded, for a student still assigned to them).
 registerRoute({
   method: "delete",
   path: "/api/v1/documents/:id",
   tags: ["Documents"],
   summary: "Soft-delete a document",
-  description: "The S3 object is kept; only the record is hidden.",
+  description:
+    "The S3 object is kept; only the record is hidden. An admin can delete any document; a consultant can delete only a document they uploaded for one of their currently assigned students (anything else is a 404).",
   request: { params: uuidParamSchema },
   responses: {
     200: { description: "Document soft-deleted" },
-    403: { description: "Admin role required" },
+    403: { description: "Admin or consultant role required" },
     404: { description: "Document not found" },
     ...AUTH_ERRORS,
   },
@@ -113,7 +169,7 @@ registerRoute({
 router.delete(
   "/:id",
   requireAuth,
-  requireRole("admin"),
+  requireRole("admin", "consultant"),
   validateParams(uuidParamSchema),
   documentsController.softDeleteById,
 );

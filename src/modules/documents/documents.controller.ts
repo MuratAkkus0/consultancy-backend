@@ -2,9 +2,42 @@ import type { NextFunction, Request, Response } from "express";
 import type { User } from "../../db/types.js";
 import type { UuidParam } from "../../lib/validators.js";
 import { documentsService } from "./documents.service.js";
-import type { DocumentQuery, ReviewDocumentDTO } from "./documents.types.js";
+import type {
+  ConsultantCreateDocumentDTO,
+  DocumentQuery,
+  ReviewDocumentDTO,
+} from "./documents.types.js";
 
 export const documentsController = {
+  // A consultant starts an upload into an assigned student's area.
+  create: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user as User;
+      const data = req.body as unknown as ConsultantCreateDocumentDTO;
+
+      const result = await documentsService.createForConsultant(user.id, data);
+      res.status(201).json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // A consultant confirms the upload succeeded (verified against S3).
+  confirm: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user as User;
+      const { id } = req.params as unknown as UuidParam;
+
+      const document = await documentsService.confirmUploadForConsultant(
+        user.id,
+        id,
+      );
+      res.json(document);
+    } catch (err) {
+      next(err);
+    }
+  },
+
   list: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = req.user as User;
@@ -71,7 +104,13 @@ export const documentsController = {
   softDeleteById: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params as unknown as UuidParam;
-      const document = await documentsService.softDeleteById(id);
+      const user = req.user as User;
+
+      const document =
+        user.role === "admin"
+          ? await documentsService.softDeleteById(id)
+          : await documentsService.softDeleteByIdForConsultant(user.id, id);
+
       res.json(document);
     } catch (err) {
       next(err);

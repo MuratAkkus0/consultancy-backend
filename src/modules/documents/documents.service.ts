@@ -9,6 +9,7 @@ import {
 } from "../../db/index.js";
 import { storage } from "../../lib/storage.js";
 import type {
+  ConsultantCreateDocumentDTO,
   CreateDocumentDTO,
   DocumentQuery,
   MyDocumentQuery,
@@ -19,6 +20,7 @@ import type {
 const documentColumns = {
   id: true,
   studentId: true,
+  uploadedById: true,
   documentTypeId: true,
   status: true,
   reviewStatus: true,
@@ -62,6 +64,27 @@ const ownedByAssignedStudent = (consultantId: string) =>
         ),
       ),
   );
+
+// INSERT-precondition guard: a consultant may only act on a student actively
+// assigned to them. 404 (not 403) so an unassigned student is indistinguishable
+// from a non-existent one.
+const assertStudentAssignedToConsultant = async (
+  consultantId: string,
+  studentId: string,
+) => {
+  const assignment = await db.query.consultantAssignmentsTable.findFirst({
+    where: and(
+      eq(consultantAssignmentsTable.consultantId, consultantId),
+      eq(consultantAssignmentsTable.studentId, studentId),
+      isNull(consultantAssignmentsTable.deletedAt),
+    ),
+    columns: { studentId: true },
+  });
+
+  if (!assignment) {
+    throw createHttpError(404, "Student not found.");
+  }
+};
 
 const paginatedList = async (
   where: SQL | undefined,
@@ -109,10 +132,45 @@ export const documentsService = {
 
     const [document] = await db
       .insert(documentsTable)
-      .values({ ...data, studentId, documentKey })
+      .values({ ...data, studentId, uploadedById: studentId, documentKey })
       .returning();
 
     const uploadUrl = await storage.getUploadUrl(documentKey, data.mimeType);
+
+    return { document: toResponse(document!), uploadUrl };
+  },
+
+  // Same intent flow as createForStudent, but a consultant uploads into an
+  // assigned student's area on their behalf. The file still lives under the
+  // student's key prefix (they own it); uploadedById records the consultant.
+  // reviewStatus is "accepted" up front — a consultant needn't review a file
+  // they placed themselves.
+  createForConsultant: async (
+    consultantId: string,
+    data: ConsultantCreateDocumentDTO,
+  ) => {
+    const { studentId, ...documentData } = data;
+
+    await assertStudentAssignedToConsultant(consultantId, studentId);
+    const { code } = await assertDocumentType(documentData.documentTypeId);
+
+    const documentKey = `private/students/${studentId}/documents/${code}-${randomUUID()}.${FILE_EXT_BY_MIME[documentData.mimeType]}`;
+
+    const [document] = await db
+      .insert(documentsTable)
+      .values({
+        ...documentData,
+        studentId,
+        uploadedById: consultantId,
+        reviewStatus: "accepted",
+        documentKey,
+      })
+      .returning();
+
+    const uploadUrl = await storage.getUploadUrl(
+      documentKey,
+      documentData.mimeType,
+    );
 
     return { document: toResponse(document!), uploadUrl };
   },
@@ -135,6 +193,40 @@ export const documentsService = {
 
     // Confirming twice is not an error — the second call just reports the
     // state that already holds (idempotent).
+    if (document.status === "uploaded") {
+      return toResponse(document);
+    }
+
+    const exists = await storage.objectExists(document.documentKey);
+    if (!exists) {
+      throw createHttpError(409, "The file has not been uploaded yet.");
+    }
+
+    const [updated] = await db
+      .update(documentsTable)
+      .set({ status: "uploaded" })
+      .where(scope)
+      .returning();
+
+    return toResponse(updated!);
+  },
+
+  // Consultant confirms an upload they started for an assigned student. Scoped
+  // by assignment (not by a fixed studentId) so it can only touch documents of
+  // the consultant's own students.
+  confirmUploadForConsultant: async (consultantId: string, id: string) => {
+    const scope = and(
+      eq(documentsTable.id, id),
+      isNull(documentsTable.deletedAt),
+      ownedByAssignedStudent(consultantId),
+    );
+
+    const document = await db.query.documentsTable.findFirst({ where: scope });
+
+    if (!document) {
+      throw createHttpError(404, "Document not found.");
+    }
+
     if (document.status === "uploaded") {
       return toResponse(document);
     }
@@ -287,7 +379,9 @@ export const documentsService = {
     return toResponse(document);
   },
 
-  // A student may remove their own document (soft delete). The S3 object is
+  // A student may remove only a document they uploaded themselves (soft
+  // delete). A document a consultant placed in their area is not theirs to
+  // delete — the uploadedById guard makes it a 404 for them. The S3 object is
   // deliberately kept: the row can be restored, and invisible rows can't be
   // downloaded anyway.
   softDeleteByIdForStudent: async (studentId: string, id: string) => {
@@ -298,7 +392,33 @@ export const documentsService = {
         and(
           eq(documentsTable.id, id),
           eq(documentsTable.studentId, studentId),
+          eq(documentsTable.uploadedById, studentId),
           isNull(documentsTable.deletedAt),
+        ),
+      )
+      .returning();
+
+    if (!document) {
+      throw createHttpError(404, "Document not found.");
+    }
+
+    return toResponse(document);
+  },
+
+  // A consultant may remove only a document THEY uploaded, and only for a
+  // student still assigned to them (e.g. cleaning up a wrong file). The
+  // uploadedById guard keeps the student's own uploads out of reach. Soft
+  // delete; the S3 object is kept.
+  softDeleteByIdForConsultant: async (consultantId: string, id: string) => {
+    const [document] = await db
+      .update(documentsTable)
+      .set({ deletedAt: new Date() })
+      .where(
+        and(
+          eq(documentsTable.id, id),
+          eq(documentsTable.uploadedById, consultantId),
+          isNull(documentsTable.deletedAt),
+          ownedByAssignedStudent(consultantId),
         ),
       )
       .returning();
