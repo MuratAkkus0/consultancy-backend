@@ -1,7 +1,16 @@
 import z from "zod";
-import { educationLevelEnum, userGenderEnum } from "../../db/index.js";
 import {
+  educationLevelEnum,
+  maritalStatusEnum,
+  userGenderEnum,
+} from "../../db/index.js";
+import {
+  certificateSchema,
   consultantCertificateSchema,
+  educationSchema,
+  experienceSchema,
+  referenceSchema,
+  skillSchema,
   targetProgramSchema,
 } from "../../db/types.js";
 
@@ -14,6 +23,7 @@ const userSelfFields = z
     phone: z.string().trim().max(20),
     image: z.url(),
     birthDate: z.coerce.date(),
+    birthPlace: z.string().trim().max(100),
     gender: z.enum(userGenderEnum.enumValues),
     preferredLanguage: z.string().trim().max(10),
     timezone: z.string().trim().max(50),
@@ -59,6 +69,18 @@ export const editStudentSelfSchema = z
         countryOfResidence: z.string().trim(),
         cityOfResidence: z.string().trim(),
         additionalInfo: z.string().trim(),
+        // CV sections (each PATCH replaces the whole array).
+        educations: z.array(educationSchema),
+        experiences: z.array(experienceSchema),
+        skills: z.array(skillSchema),
+        certificates: z.array(certificateSchema),
+        references: z.array(referenceSchema),
+        // Single CV fields.
+        maritalStatus: z.enum(maritalStatusEnum.enumValues),
+        driversLicense: z.string().trim().max(50),
+        linkedin: z.url(),
+        github: z.url(),
+        portfolio: z.url(),
       })
       .partial(),
   })

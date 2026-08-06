@@ -66,6 +66,58 @@ export const consultantCertificateSchema = z.object({
 export type ConsultantCertificate = z.infer<typeof consultantCertificateSchema>;
 export type TargetProgram = z.infer<typeof targetProgramSchema>;
 
+// --- Student CV sections (stored as validated JSONB on student_profiles) ---
+// Month precision is enough for a CV timeline; "2026-08".
+const yearMonth = z
+  .string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Expected YYYY-MM");
+
+export const educationSchema = z.object({
+  institution: z.string(),
+  degree: z.string(),
+  field: z.string(),
+  startDate: yearMonth,
+  endDate: yearMonth.nullish(), // null/absent while ongoing
+  gpa: z.number().optional(),
+  description: z.string().optional(),
+});
+
+export const experienceSchema = z.object({
+  company: z.string(),
+  position: z.string(),
+  location: z.string().optional(),
+  startDate: yearMonth,
+  endDate: yearMonth.nullish(), // null/absent when `current` is true
+  current: z.boolean(),
+  description: z.string().optional(),
+});
+
+export const skillSchema = z.object({
+  name: z.string(),
+  level: z.int().min(1).max(5),
+});
+
+export const certificateSchema = z.object({
+  name: z.string(),
+  issuer: z.string(),
+  date: yearMonth,
+  url: z.url().optional(),
+});
+
+export const referenceSchema = z.object({
+  name: z.string(),
+  title: z.string(),
+  company: z.string().optional(),
+  email: z.email().optional(),
+  phone: z.string().optional(),
+});
+
+export type Education = z.infer<typeof educationSchema>;
+export type Experience = z.infer<typeof experienceSchema>;
+export type Skill = z.infer<typeof skillSchema>;
+export type Certificate = z.infer<typeof certificateSchema>;
+export type Reference = z.infer<typeof referenceSchema>;
+
 // Course
 export type Course = typeof coursesTable.$inferSelect;
 

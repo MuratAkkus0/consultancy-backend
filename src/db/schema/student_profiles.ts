@@ -15,7 +15,14 @@ import { users } from "./auth.js";
 import { timestamps } from "./_shared.js";
 import { studentTargetCountriesTable } from "./student_target_countries.js";
 import { studentLanguagesTable } from "./student_languages.js";
-import type { TargetProgram } from "../types.js";
+import type {
+  Certificate,
+  Education,
+  Experience,
+  Reference,
+  Skill,
+  TargetProgram,
+} from "../types.js";
 
 export const educationLevelEnum = pgEnum("education_level", [
   "primary",
@@ -26,6 +33,13 @@ export const educationLevelEnum = pgEnum("education_level", [
   "bachelor",
   "master",
   "doctorate",
+]);
+
+export const maritalStatusEnum = pgEnum("marital_status", [
+  "single",
+  "married",
+  "divorced",
+  "widowed",
 ]);
 
 export const studentProfilesTable = pgTable("student_profiles", {
@@ -65,6 +79,21 @@ export const studentProfilesTable = pgTable("student_profiles", {
   cityOfResidence: text("city_of_residence"),
   additionalInfo: text("additional_info"),
   isDataProcessingAccepted: boolean("is_data_processing_accepted"),
+  // --- CV sections (validated JSONB, like targetPrograms) ---
+  educations: jsonb("educations").$type<Education[]>().notNull().default([]),
+  experiences: jsonb("experiences").$type<Experience[]>().notNull().default([]),
+  skills: jsonb("skills").$type<Skill[]>().notNull().default([]),
+  certificates: jsonb("certificates")
+    .$type<Certificate[]>()
+    .notNull()
+    .default([]),
+  references: jsonb("references").$type<Reference[]>().notNull().default([]),
+  // --- Single CV fields ---
+  maritalStatus: maritalStatusEnum("marital_status"),
+  driversLicense: varchar("drivers_license", { length: 50 }),
+  linkedin: text("linkedin"),
+  github: text("github"),
+  portfolio: text("portfolio"),
   ...timestamps,
 });
 
