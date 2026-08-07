@@ -6,6 +6,7 @@ import {
   db,
   documentsTable,
   documentTypesTable,
+  users,
 } from "../../db/index.js";
 import { storage } from "../../lib/storage.js";
 import type {
@@ -82,6 +83,25 @@ const assertStudentAssignedToConsultant = async (
   });
 
   if (!assignment) {
+    throw createHttpError(404, "Student not found.");
+  }
+};
+
+// INSERT-precondition guard for admin uploads: the target must be a real,
+// non-deleted student (admins act on anyone, so there is no assignment to
+// check). Turns a would-be FK violation into a clean 404.
+const assertStudentExists = async (studentId: string) => {
+  const student = await db.query.users.findFirst({
+    where: and(
+      eq(users.id, studentId),
+      eq(users.role, "student"),
+      ne(users.status, "deleted"),
+      ne(users.status, "soft_deleted"),
+    ),
+    columns: { id: true },
+  });
+
+  if (!student) {
     throw createHttpError(404, "Student not found.");
   }
 };
@@ -175,6 +195,36 @@ export const documentsService = {
     return { document: toResponse(document!), uploadUrl };
   },
 
+  // Same as createForConsultant, but an admin acts on any student — there is no
+  // assignment to check, only that the student exists. uploadedById records the
+  // admin; reviewStatus is "accepted" (an admin upload is not a review subject).
+  createForAdmin: async (adminId: string, data: ConsultantCreateDocumentDTO) => {
+    const { studentId, ...documentData } = data;
+
+    await assertStudentExists(studentId);
+    const { code } = await assertDocumentType(documentData.documentTypeId);
+
+    const documentKey = `private/students/${studentId}/documents/${code}-${randomUUID()}.${FILE_EXT_BY_MIME[documentData.mimeType]}`;
+
+    const [document] = await db
+      .insert(documentsTable)
+      .values({
+        ...documentData,
+        studentId,
+        uploadedById: adminId,
+        reviewStatus: "accepted",
+        documentKey,
+      })
+      .returning();
+
+    const uploadUrl = await storage.getUploadUrl(
+      documentKey,
+      documentData.mimeType,
+    );
+
+    return { document: toResponse(document!), uploadUrl };
+  },
+
   // Step 2: the client reports the PUT succeeded. We only believe it after
   // asking S3 whether the object is really there — otherwise a dishonest or
   // broken client could flip a ghost row to "uploaded".
@@ -219,6 +269,37 @@ export const documentsService = {
       eq(documentsTable.id, id),
       isNull(documentsTable.deletedAt),
       ownedByAssignedStudent(consultantId),
+    );
+
+    const document = await db.query.documentsTable.findFirst({ where: scope });
+
+    if (!document) {
+      throw createHttpError(404, "Document not found.");
+    }
+
+    if (document.status === "uploaded") {
+      return toResponse(document);
+    }
+
+    const exists = await storage.objectExists(document.documentKey);
+    if (!exists) {
+      throw createHttpError(409, "The file has not been uploaded yet.");
+    }
+
+    const [updated] = await db
+      .update(documentsTable)
+      .set({ status: "uploaded" })
+      .where(scope)
+      .returning();
+
+    return toResponse(updated!);
+  },
+
+  // Admin confirms an upload for any document — scoped by id only.
+  confirmUploadForAdmin: async (id: string) => {
+    const scope = and(
+      eq(documentsTable.id, id),
+      isNull(documentsTable.deletedAt),
     );
 
     const document = await db.query.documentsTable.findFirst({ where: scope });

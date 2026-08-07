@@ -21,21 +21,22 @@ const AUTH_ERRORS = {
   401: { description: "Not authenticated" },
 } as const;
 
-// Start an upload into an assigned student's area - consultant only. Mirrors
-// the student's /me/documents intent: the file goes straight to S3 via the
-// returned presigned URL; the record stays "pending" until confirmed.
+// Start an upload into a student's area. Admin acts on any student; a
+// consultant only on a student assigned to them. Mirrors the student's
+// /me/documents intent: the file goes straight to S3 via the returned
+// presigned URL; the record stays "pending" until confirmed.
 registerRoute({
   method: "post",
   path: "/api/v1/documents",
   tags: ["Documents"],
-  summary: "Upload a document for an assigned student",
+  summary: "Upload a document for a student",
   description:
-    "A consultant declares a file (studentId, type, name, mime, size) for a student actively assigned to them and gets back { document, uploadUrl }. The client PUTs the file to uploadUrl and then confirms. Unassigned or unknown students are a 404.",
+    "Declares a file (studentId, type, name, mime, size) and returns { document, uploadUrl }. An admin can upload for any student; a consultant only for a student actively assigned to them. The client PUTs the file to uploadUrl and then confirms. Unknown (or, for a consultant, unassigned) students are a 404.",
   request: { body: consultantCreateDocumentSchema },
   responses: {
     201: { description: "{ document, uploadUrl }" },
     400: { description: "Validation error" },
-    403: { description: "Consultant role required" },
+    403: { description: "Admin or consultant role required" },
     404: { description: "Student or document type not found" },
     ...AUTH_ERRORS,
   },
@@ -43,33 +44,33 @@ registerRoute({
 router.post(
   "/",
   requireAuth,
-  requireRole("consultant"),
+  requireRole("admin", "consultant"),
   validateBody(consultantCreateDocumentSchema),
   documentsController.create,
 );
 
-// Confirm the upload to S3 succeeded - consultant only, scoped to their own
-// students' documents. Verified against S3; idempotent.
+// Confirm the upload to S3 succeeded. Admin any document; a consultant only
+// their own students' documents. Verified against S3; idempotent.
 registerRoute({
   method: "post",
   path: "/api/v1/documents/:id/confirm",
   tags: ["Documents"],
   summary: "Confirm a document upload",
   description:
-    "Marks the document as uploaded after verifying the object exists in storage. Only documents of the consultant's own students are reachable. Idempotent.",
+    "Marks the document as uploaded after verifying the object exists in storage. An admin can confirm any document; a consultant only documents of their own students. Idempotent.",
   request: { params: uuidParamSchema },
   responses: {
     200: { description: "The confirmed document" },
     404: { description: "Document not found" },
     409: { description: "The file has not been uploaded yet" },
-    403: { description: "Consultant role required" },
+    403: { description: "Admin or consultant role required" },
     ...AUTH_ERRORS,
   },
 });
 router.post(
   "/:id/confirm",
   requireAuth,
-  requireRole("consultant"),
+  requireRole("admin", "consultant"),
   validateParams(uuidParamSchema),
   documentsController.confirm,
 );

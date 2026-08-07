@@ -9,29 +9,36 @@ import type {
 } from "./documents.types.js";
 
 export const documentsController = {
-  // A consultant starts an upload into an assigned student's area.
+  // Start an upload into a student's area. An admin acts on any student; a
+  // consultant only on a student assigned to them.
   create: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = req.user as User;
       const data = req.body as unknown as ConsultantCreateDocumentDTO;
 
-      const result = await documentsService.createForConsultant(user.id, data);
+      const result =
+        user.role === "admin"
+          ? await documentsService.createForAdmin(user.id, data)
+          : await documentsService.createForConsultant(user.id, data);
+
       res.status(201).json(result);
     } catch (err) {
       next(err);
     }
   },
 
-  // A consultant confirms the upload succeeded (verified against S3).
+  // Confirm the upload succeeded (verified against S3). Admin any document; a
+  // consultant only their own students' documents.
   confirm: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = req.user as User;
       const { id } = req.params as unknown as UuidParam;
 
-      const document = await documentsService.confirmUploadForConsultant(
-        user.id,
-        id,
-      );
+      const document =
+        user.role === "admin"
+          ? await documentsService.confirmUploadForAdmin(id)
+          : await documentsService.confirmUploadForConsultant(user.id, id);
+
       res.json(document);
     } catch (err) {
       next(err);
