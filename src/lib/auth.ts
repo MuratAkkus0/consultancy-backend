@@ -1,8 +1,10 @@
-import { betterAuth } from "better-auth";
+import { APIError, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../db/db.js";
 import { env } from "../config/env.js";
 import { randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
+import { users } from "../db/index.js";
 
 export const auth = betterAuth({
   experimental: { joins: true },
@@ -91,6 +93,23 @@ export const auth = betterAuth({
       disableTitleBorder: false,
       disableCornerDecorations: false,
       disableBackgroundGrid: false,
+    },
+  },
+  databaseHooks: {
+    session: {
+      create: {
+        before: async (session) => {
+          const user = await db.query.users.findFirst({
+            where: eq(users.id, session.userId),
+            columns: { status: true },
+          });
+          if (user?.status !== "active") {
+            throw new APIError("FORBIDDEN", {
+              message: "Account is not active.",
+            });
+          }
+        },
+      },
     },
   },
 });
