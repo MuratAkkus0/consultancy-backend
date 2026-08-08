@@ -124,19 +124,20 @@ router.get(
   documentsController.getDownloadUrl,
 );
 
-// Review a document - the assigned consultant accepts or rejects it.
+// Review a document - accept or reject an uploaded document. An admin can
+// review any document; a consultant only documents of their own students.
 registerRoute({
   method: "patch",
   path: "/api/v1/documents/:id/review",
   tags: ["Documents"],
   summary: "Review a document",
   description:
-    "The assigned consultant accepts or rejects an uploaded document. Only uploaded, non-deleted documents of the consultant's own students can be reviewed.",
+    "Moves an uploaded document's review status to accepted or rejected. An admin can review any document; a consultant only uploaded, non-deleted documents of their own students.",
   request: { params: uuidParamSchema, body: reviewDocumentSchema },
   responses: {
     200: { description: "Document with the updated review status" },
     400: { description: "Validation error" },
-    403: { description: "Consultant role required" },
+    403: { description: "Admin or consultant role required" },
     404: { description: "Document not found" },
     ...AUTH_ERRORS,
   },
@@ -144,7 +145,7 @@ registerRoute({
 router.patch(
   "/:id/review",
   requireAuth,
-  requireRole("consultant"),
+  requireRole("admin", "consultant"),
   validateParams(uuidParamSchema),
   validateBody(reviewDocumentSchema),
   documentsController.reviewById,

@@ -163,8 +163,8 @@ export const documentsService = {
   // Same intent flow as createForStudent, but a consultant uploads into an
   // assigned student's area on their behalf. The file still lives under the
   // student's key prefix (they own it); uploadedById records the consultant.
-  // reviewStatus is "accepted" up front — a consultant needn't review a file
-  // they placed themselves.
+  // reviewStatus stays at its "pending" default: every upload is reviewed the
+  // same way, so admin/consultant can later move it to accepted/rejected.
   createForConsultant: async (
     consultantId: string,
     data: ConsultantCreateDocumentDTO,
@@ -182,7 +182,6 @@ export const documentsService = {
         ...documentData,
         studentId,
         uploadedById: consultantId,
-        reviewStatus: "accepted",
         documentKey,
       })
       .returning();
@@ -197,7 +196,8 @@ export const documentsService = {
 
   // Same as createForConsultant, but an admin acts on any student — there is no
   // assignment to check, only that the student exists. uploadedById records the
-  // admin; reviewStatus is "accepted" (an admin upload is not a review subject).
+  // admin; reviewStatus stays at its "pending" default and is set later via the
+  // review endpoint, just like every other upload.
   createForAdmin: async (adminId: string, data: ConsultantCreateDocumentDTO) => {
     const { studentId, ...documentData } = data;
 
@@ -212,7 +212,6 @@ export const documentsService = {
         ...documentData,
         studentId,
         uploadedById: adminId,
-        reviewStatus: "accepted",
         documentKey,
       })
       .returning();
@@ -449,6 +448,27 @@ export const documentsService = {
           eq(documentsTable.status, "uploaded"),
           isNull(documentsTable.deletedAt),
           ownedByAssignedStudent(consultantId),
+        ),
+      )
+      .returning();
+
+    if (!document) {
+      throw createHttpError(404, "Document not found.");
+    }
+
+    return toResponse(document);
+  },
+
+  // Admin reviews any uploaded document — no assignment scope.
+  reviewById: async (id: string, data: ReviewDocumentDTO) => {
+    const [document] = await db
+      .update(documentsTable)
+      .set({ reviewStatus: data.reviewStatus })
+      .where(
+        and(
+          eq(documentsTable.id, id),
+          eq(documentsTable.status, "uploaded"),
+          isNull(documentsTable.deletedAt),
         ),
       )
       .returning();

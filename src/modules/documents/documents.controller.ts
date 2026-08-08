@@ -91,17 +91,19 @@ export const documentsController = {
     }
   },
 
+  // Move a document's review status to accepted/rejected. Admin any document;
+  // a consultant only documents of their own students.
   reviewById: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params as unknown as UuidParam;
       const user = req.user as User;
       const data = req.body as unknown as ReviewDocumentDTO;
 
-      const document = await documentsService.reviewByIdForConsultant(
-        user.id,
-        id,
-        data,
-      );
+      const document =
+        user.role === "admin"
+          ? await documentsService.reviewById(id, data)
+          : await documentsService.reviewByIdForConsultant(user.id, id, data);
+
       res.json(document);
     } catch (err) {
       next(err);
