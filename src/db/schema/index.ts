@@ -17,3 +17,4 @@ export * from "./document_types.js";
 export * from "./documents.js";
 export * from "./s3_deletion_queues.js";
 export * from "./student_required_documents.js";
+export * from "./conversations.js";
