@@ -1,4 +1,11 @@
-import { check, pgEnum, pgTable, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  check,
+  pgEnum,
+  pgTable,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { users } from "./auth.js";
 import { timestamps } from "./_shared.js";
 import { coursesTable } from "./courses.js";
@@ -24,6 +31,7 @@ export const conversationsTable = pgTable(
     courseId: uuid("course_id").references(() => coursesTable.id, {
       onDelete: "cascade",
     }),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
     ...timestamps,
   },
   (t) => [

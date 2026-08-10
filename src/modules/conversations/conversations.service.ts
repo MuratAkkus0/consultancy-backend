@@ -2,6 +2,10 @@ import createHttpError from "http-errors";
 import { db } from "../../db/db.js";
 import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { conversationsTable, type DbExecutor } from "../../db/index.js";
+import {
+  assertConversationMembership,
+  assertStudentAssignedToConsultant,
+} from "./conversations.helpers.js";
 
 const getArrangedUserIds = (currentUserId: string, otherUserId: string) => {
   const [userAId, userBId] =
@@ -9,37 +13,6 @@ const getArrangedUserIds = (currentUserId: string, otherUserId: string) => {
       ? [currentUserId, otherUserId]
       : [otherUserId, currentUserId];
   return { userAId, userBId };
-};
-
-const getDirectConversation = async (
-  conversationId: string,
-  executor: DbExecutor = db,
-) => {
-  const conversation = await executor.query.conversationsTable.findFirst({
-    where: (t, { and, eq, isNull }) =>
-      and(eq(t.id, conversationId), isNull(t.deletedAt)),
-  });
-  return conversation;
-};
-
-const assertStudentAssignedToConsultant = async (
-  currentUserId: string,
-  otherUserId: string,
-) => {
-  const assignment = await db.query.consultantAssignmentsTable.findFirst({
-    where: (t, { and, eq, isNull }) =>
-      and(
-        or(
-          and(eq(t.consultantId, currentUserId), eq(t.studentId, otherUserId)),
-          and(eq(t.consultantId, otherUserId), eq(t.studentId, currentUserId)),
-        ),
-        isNull(t.deletedAt),
-      ),
-  });
-
-  if (!assignment) {
-    throw createHttpError(404, "Conversation not found.");
-  }
 };
 
 export const conversationsService = {
@@ -58,7 +31,7 @@ export const conversationsService = {
       db.query.conversationsTable.findMany({
         offset,
         limit,
-        orderBy: (t) => desc(t.updatedAt),
+        orderBy: (t) => desc(t.lastMessageAt),
         where,
       }),
       db.$count(conversationsTable, where),
@@ -88,19 +61,10 @@ export const conversationsService = {
     currentUserId: string,
     conversationId: string,
   ) => {
-    const conversation = await getDirectConversation(conversationId);
-
-    if (!conversation) {
-      throw createHttpError(404, "Conversation not found.");
-    }
-
-    const { userAId, userBId } = conversation;
-
-    if (userAId !== currentUserId && userBId !== currentUserId) {
-      throw createHttpError(404, "Conversation not found.");
-    }
-
-    await assertStudentAssignedToConsultant(userAId, userBId);
+    const conversation = await assertConversationMembership(
+      currentUserId,
+      conversationId,
+    );
 
     return conversation;
   },
@@ -172,6 +136,23 @@ export const conversationsService = {
 
       return conversation;
     });
+    return conversation;
+  },
+  touchConversation: async (
+    conversationId: string,
+    executor: DbExecutor = db,
+  ) => {
+    const [conversation] = await executor
+      .update(conversationsTable)
+      .set({ lastMessageAt: new Date() })
+      .where(
+        and(
+          eq(conversationsTable.id, conversationId),
+          isNull(conversationsTable.deletedAt),
+        ),
+      )
+      .returning();
+
     return conversation;
   },
 };

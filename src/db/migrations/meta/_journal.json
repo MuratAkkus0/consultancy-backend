@@ -134,6 +134,13 @@
       "when": 1786051929949,
       "tag": "0018_tearful_owl",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1786398381263,
+      "tag": "0019_low_cassandra_nova",
+      "breakpoints": true
     }
   ]
 }
