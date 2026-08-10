@@ -63,26 +63,22 @@ export const messagesService = {
     messageId: string,
     body: string,
   ) => {
-    const message = await db.transaction(async (tx) => {
-      await assertConversationMembership(currentUserId, conversationId, tx);
+    await assertConversationMembership(currentUserId, conversationId);
 
-      const [editedMessage] = await tx
-        .update(messagesTable)
-        .set({ body })
-        .where(
-          and(
-            eq(messagesTable.conversationId, conversationId),
-            eq(messagesTable.id, messageId),
-            eq(messagesTable.senderId, currentUserId),
-            isNull(messagesTable.deletedAt),
-          ),
-        )
-        .returning();
+    const [message] = await db
+      .update(messagesTable)
+      .set({ body })
+      .where(
+        and(
+          eq(messagesTable.conversationId, conversationId),
+          eq(messagesTable.id, messageId),
+          eq(messagesTable.senderId, currentUserId),
+          isNull(messagesTable.deletedAt),
+        ),
+      )
+      .returning();
 
-      if (!editedMessage) throw createHttpError(404, "Message not found.");
-
-      return editedMessage;
-    });
+    if (!message) throw createHttpError(404, "Message not found.");
 
     return message;
   },
