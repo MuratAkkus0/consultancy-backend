@@ -27,7 +27,7 @@ export interface ServerToClientEvents {
   "message:edit": (message: MessagePayload) => void;
   "message:delete": (message: MessagePayload) => void;
 }
-export interface InterServerEvents {}
+export type InterServerEvents = Record<string, never>;
 export interface SocketData {
   user: typeof auth.$Infer.Session.user;
 }
