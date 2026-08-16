@@ -10,6 +10,7 @@ import type {
   EditMessageParams,
   SendMessageDTO,
 } from "./messages.types.js";
+import { getIo } from "../../lib/socket.js";
 
 export const messagesController = {
   listMessages: async (req: Request, res: Response, next: NextFunction) => {
@@ -40,6 +41,12 @@ export const messagesController = {
         conversationId,
         body,
       );
+
+      if (message) {
+        const io = getIo();
+        io.to(`conversation:${conversationId}`).emit("message:new", message);
+      }
+
       res.json(message);
     } catch (error) {
       next(error);
@@ -57,6 +64,10 @@ export const messagesController = {
         messageId,
         body,
       );
+
+      const io = getIo();
+      io.to(`conversation:${conversationId}`).emit("message:edit", message);
+
       res.json(message);
     } catch (error) {
       next(error);
@@ -78,6 +89,10 @@ export const messagesController = {
         conversationId,
         messageId,
       );
+
+      const io = getIo();
+      io.to(`conversation:${conversationId}`).emit("message:delete", message);
+
       res.json(message);
     } catch (error) {
       next(error);
