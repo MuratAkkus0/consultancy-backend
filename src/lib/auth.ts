@@ -5,6 +5,8 @@ import { env } from "../config/env.js";
 import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import { users } from "../db/index.js";
+import { sendMail } from "./email/mailer.js";
+import { resetPasswordEmail, verifyEmail } from "./email/templates.js";
 
 export const auth = betterAuth({
   experimental: { joins: true },
@@ -23,6 +25,30 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
+    // better-auth only calls this for an existing user, then still reports
+    // success to the client regardless (so it never leaks whether an email is
+    // registered). A mail failure must not break that flow, so we log and
+    // swallow instead of letting it bubble into a 500.
+    sendResetPassword: async ({ user, url }) => {
+      try {
+        const mail = resetPasswordEmail({ url, name: user.name });
+        await sendMail({ to: user.email, ...mail });
+      } catch (err) {
+        console.error("[auth] failed to send reset-password email:", err);
+      }
+    },
+  },
+  emailVerification: {
+    // Fire a verification email automatically after sign-up.
+    sendOnSignUp: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      try {
+        const mail = verifyEmail({ url, name: user.name });
+        await sendMail({ to: user.email, ...mail });
+      } catch (err) {
+        console.error("[auth] failed to send verification email:", err);
+      }
+    },
   },
   socialProviders: {
     // google: {},
