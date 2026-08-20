@@ -51,7 +51,7 @@ const EnvSchema = z.object({
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.email().optional(),
   APP_WEB_URL: z.url(),
-  SMTP_SECURE: z.coerce.boolean().default(false),
+  SMTP_SECURE: z.coerce.boolean().default(true),
 });
 
 // Validate
