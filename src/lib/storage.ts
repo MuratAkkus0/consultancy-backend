@@ -12,10 +12,6 @@ import { create } from "content-disposition";
 
 const s3Client = new S3Client({
   region: config.s3.region,
-  credentials: {
-    accessKeyId: config.s3.accessKeyId,
-    secretAccessKey: config.s3.secretAccessKey,
-  },
 });
 
 const URL_TTL_SECONDS = 300;
