@@ -1,0 +1,159 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+  AWS_DEPLOY_ROLE: ${{ vars.AWS_DEPLOY_ROLE }}
+
+  ARTIFACT_BUCKET: ${{ vars.ARTIFACT_BUCKET }}
+
+  CODEDEPLOY_APPLICATION: ${{ vars.CODEDEPLOY_APPLICATION }}
+  CODEDEPLOY_DEPLOYMENT_GROUP: ${{ vars.CODEDEPLOY_DEPLOYMENT_GROUP }}
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build application
+        run: npm run build
+
+      - name: Prepare CodeDeploy bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BUNDLE_DIR="codedeploy-bundle"
+          ARTIFACT_NAME="${GITHUB_SHA}.zip"
+
+          rm -rf "$BUNDLE_DIR"
+          mkdir -p "$BUNDLE_DIR"
+
+          cp -R dist "$BUNDLE_DIR/"
+          cp -R deploy "$BUNDLE_DIR/"
+
+          cp package.json "$BUNDLE_DIR/"
+          cp package-lock.json "$BUNDLE_DIR/"
+          cp appspec.yml "$BUNDLE_DIR/"
+
+          cd "$BUNDLE_DIR"
+          zip -r "../$ARTIFACT_NAME" .
+          cd ..
+
+          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_ENV"
+
+      - name: Verify deployment bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Artifact: $ARTIFACT_NAME"
+          unzip -l "$ARTIFACT_NAME"
+
+          unzip -l "$ARTIFACT_NAME" | grep -q "appspec.yml"
+          unzip -l "$ARTIFACT_NAME" | grep -q "dist/"
+          unzip -l "$ARTIFACT_NAME" | grep -q "deploy/"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.AWS_DEPLOY_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Upload deployment artifact to S3
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          S3_KEY="backend/${GITHUB_SHA}.zip"
+
+          aws s3 cp \
+            "$ARTIFACT_NAME" \
+            "s3://${ARTIFACT_BUCKET}/${S3_KEY}"
+
+          echo "S3_KEY=$S3_KEY" >> "$GITHUB_ENV"
+
+      - name: Create CodeDeploy deployment
+        id: codedeploy
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          DEPLOYMENT_ID="$(
+            aws deploy create-deployment \
+              --application-name "$CODEDEPLOY_APPLICATION" \
+              --deployment-group-name "$CODEDEPLOY_DEPLOYMENT_GROUP" \
+              --revision "revisionType=S3,s3Location={bucket=${ARTIFACT_BUCKET},key=${S3_KEY},bundleType=zip}" \
+              --description "GitHub deployment ${GITHUB_REPOSITORY}@${GITHUB_SHA}" \
+              --query "deploymentId" \
+              --output text
+          )"
+
+          echo "deployment_id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
+
+          echo "Created CodeDeploy deployment:"
+          echo "$DEPLOYMENT_ID"
+
+      - name: Wait for CodeDeploy deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          DEPLOYMENT_ID="${{ steps.codedeploy.outputs.deployment_id }}"
+
+          echo "Waiting for deployment $DEPLOYMENT_ID"
+
+          aws deploy wait deployment-successful \
+            --deployment-id "$DEPLOYMENT_ID"
+
+      - name: Show deployment result
+        if: always()
+        shell: bash
+        run: |
+          DEPLOYMENT_ID="${{ steps.codedeploy.outputs.deployment_id }}"
+
+          if [ -z "$DEPLOYMENT_ID" ]; then
+            echo "No deployment ID was created."
+            exit 0
+          fi
+
+          aws deploy get-deployment \
+            --deployment-id "$DEPLOYMENT_ID" \
+            --query "deploymentInfo.{
+              Status:status,
+              Creator:creator,
+              Description:description,
+              Artifact:revision.s3Location.key,
+              Started:createTime,
+              Completed:completeTime,
+              Error:errorInformation
+            }" \
+            --output table
