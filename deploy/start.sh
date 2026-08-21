@@ -12,4 +12,4 @@ ENV_EXPORTS="$(
 )"
 eval "$ENV_EXPORTS"
 
-exec /usr/bin/node /srv/edu-danisman/dist/server.js
+exec /home/admin/.nvm/versions/node/v24.19.0/bin/node /home/admin/consultancy-backend/dist/server.js
