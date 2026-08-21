@@ -1,3 +1,5 @@
+import { env } from "../../config/env.js";
+
 export interface EmailContent {
   subject: string;
   text: string;
@@ -6,8 +8,8 @@ export interface EmailContent {
 
 const brand = {
   name: "Milestone Education Germany",
-  siteUrl: "https://www.milestonegermany.de",
-  logoUrl: "https://www.milestonegermany.de/images/logo-yatay-colored.png",
+  siteUrl: env.APP_WEB_URL,
+  logoUrl: `${env.APP_WEB_URL}/images/logo-yatay-colored.png`,
   supportEmail: "info@milestonegermany.de",
   phone: "+49 160 8520519",
   phoneHref: "+491608520519",
