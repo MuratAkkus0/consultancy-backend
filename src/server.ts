@@ -1,4 +1,3 @@
-import "dotenv/config.js";
 import { app } from "./app.js";
 import { env } from "./config/env.js";
 import http from "node:http";
