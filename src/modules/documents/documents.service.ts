@@ -9,6 +9,10 @@ import {
   users,
 } from "../../db/index.js";
 import { storage } from "../../lib/storage.js";
+import {
+  notifyDocumentReviewed,
+  notifyDocumentUploaded,
+} from "./documents.notifications.js";
 import type {
   ConsultantCreateDocumentDTO,
   CreateDocumentDTO,
@@ -105,6 +109,34 @@ const assertStudentExists = async (studentId: string) => {
     throw createHttpError(404, "Student not found.");
   }
 };
+
+const applyReviewStatus = async (
+  scope: SQL | undefined,
+  reviewStatus: ReviewDocumentDTO["reviewStatus"],
+) =>
+  db.transaction(async (tx) => {
+    const [current] = await tx
+      .select()
+      .from(documentsTable)
+      .where(scope)
+      .for("update");
+
+    if (!current) {
+      throw createHttpError(404, "Document not found.");
+    }
+
+    if (current.reviewStatus === reviewStatus) {
+      return { document: current, changed: false };
+    }
+
+    const [updated] = await tx
+      .update(documentsTable)
+      .set({ reviewStatus })
+      .where(eq(documentsTable.id, current.id))
+      .returning();
+
+    return { document: updated!, changed: true };
+  });
 
 const paginatedList = async (
   where: SQL | undefined,
@@ -254,10 +286,17 @@ export const documentsService = {
     const [updated] = await db
       .update(documentsTable)
       .set({ status: "uploaded" })
-      .where(scope)
+      .where(and(scope, eq(documentsTable.status, "pending")))
       .returning();
 
-    return toResponse(updated!);
+    // 0 row - someone already set that to uploaded. idempotent
+    if (!updated) {
+      return toResponse({ ...document, status: "uploaded" as const });
+    }
+
+    notifyDocumentUploaded(updated);
+
+    return toResponse(updated);
   },
 
   // Consultant confirms an upload they started for an assigned student. Scoped
@@ -288,10 +327,17 @@ export const documentsService = {
     const [updated] = await db
       .update(documentsTable)
       .set({ status: "uploaded" })
-      .where(scope)
+      .where(and(scope, eq(documentsTable.status, "pending")))
       .returning();
 
-    return toResponse(updated!);
+    // 0 row - someone already set that to uploaded. idempotent
+    if (!updated) {
+      return toResponse({ ...document, status: "uploaded" as const });
+    }
+
+    notifyDocumentUploaded(updated);
+
+    return toResponse(updated);
   },
 
   // Admin confirms an upload for any document — scoped by id only.
@@ -319,10 +365,17 @@ export const documentsService = {
     const [updated] = await db
       .update(documentsTable)
       .set({ status: "uploaded" })
-      .where(scope)
+      .where(and(scope, eq(documentsTable.status, "pending")))
       .returning();
 
-    return toResponse(updated!);
+    // 0 row - someone already set that to uploaded. idempotent
+    if (!updated) {
+      return toResponse({ ...document, status: "uploaded" as const });
+    }
+
+    notifyDocumentUploaded(updated);
+
+    return toResponse(updated);
   },
 
   // The student sees all of their own documents, including pending ones —
@@ -439,21 +492,18 @@ export const documentsService = {
     id: string,
     data: ReviewDocumentDTO,
   ) => {
-    const [document] = await db
-      .update(documentsTable)
-      .set({ reviewStatus: data.reviewStatus })
-      .where(
-        and(
-          eq(documentsTable.id, id),
-          eq(documentsTable.status, "uploaded"),
-          isNull(documentsTable.deletedAt),
-          ownedByAssignedStudent(consultantId),
-        ),
-      )
-      .returning();
+    const { document, changed } = await applyReviewStatus(
+      and(
+        eq(documentsTable.id, id),
+        eq(documentsTable.status, "uploaded"),
+        isNull(documentsTable.deletedAt),
+        ownedByAssignedStudent(consultantId),
+      ),
+      data.reviewStatus,
+    );
 
-    if (!document) {
-      throw createHttpError(404, "Document not found.");
+    if (changed) {
+      notifyDocumentReviewed(consultantId, document, data.reviewStatus);
     }
 
     return toResponse(document);
@@ -461,21 +511,14 @@ export const documentsService = {
 
   // Admin reviews any uploaded document — no assignment scope.
   reviewById: async (id: string, data: ReviewDocumentDTO) => {
-    const [document] = await db
-      .update(documentsTable)
-      .set({ reviewStatus: data.reviewStatus })
-      .where(
-        and(
-          eq(documentsTable.id, id),
-          eq(documentsTable.status, "uploaded"),
-          isNull(documentsTable.deletedAt),
-        ),
-      )
-      .returning();
-
-    if (!document) {
-      throw createHttpError(404, "Document not found.");
-    }
+    const { document } = await applyReviewStatus(
+      and(
+        eq(documentsTable.id, id),
+        eq(documentsTable.status, "uploaded"),
+        isNull(documentsTable.deletedAt),
+      ),
+      data.reviewStatus,
+    );
 
     return toResponse(document);
   },

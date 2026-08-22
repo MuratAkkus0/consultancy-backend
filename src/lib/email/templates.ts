@@ -24,6 +24,10 @@ const brand = {
     muted: "#4b5563",
     subtle: "#9ca3af",
     line: "#e5e7eb",
+    // Inceleme sonucu bildirimleri icin. Lacivert/altin paletle cakismasin
+    // diye ikisi de doygunlugu dusuk, koyu tonlar.
+    success: "#15803d",
+    danger: "#b91c1c",
   },
 
   font:
@@ -258,3 +262,232 @@ export const verifyEmail = ({
     footnoteHtml: `Bu bağlantı ${expiresInHours} saat boyunca geçerlidir. Bu hesabı siz oluşturmadıysanız bu e-postayı yok sayabilirsiniz.`,
   }),
 });
+
+// Tek örnek: Intl formatter kurulumu pahalı, her e-postada yeniden yaratmayalım.
+// Saat dilimi sabit (Europe/Berlin) — sunucu TZ'i değişse de e-postadaki saat
+// alıcı için aynı anlama gelsin.
+const dateTimeFormatter = new Intl.DateTimeFormat("tr-TR", {
+  dateStyle: "long",
+  timeStyle: "short",
+  timeZone: "Europe/Berlin",
+});
+
+const detailRow = (label: string, value: string, valueColor?: string) => {
+  const c = brand.colors;
+  return `<tr>
+    <td style="padding:10px 0 0;font-family:${brand.font};font-size:13px;line-height:1.5;color:${c.subtle};white-space:nowrap;vertical-align:top;">${escapeHtml(label)}</td>
+    <td style="padding:10px 0 0 16px;font-family:${brand.font};font-size:13px;line-height:1.5;font-weight:600;color:${valueColor ?? c.primary};word-break:break-word;">${escapeHtml(value)}</td>
+  </tr>`;
+};
+
+type DetailRowTuple = [label: string, value: string, valueColor?: string];
+
+// Şerit border-left yerine ayrı bir hücre: Outlook td border'larını yer yer
+// yutuyor.
+const detailCard = (rows: DetailRowTuple[], stripeColor?: string) => {
+  const c = brand.colors;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 0;background:${c.surface};border:1px solid ${c.line};border-radius:12px;overflow:hidden;">
+    <tr>
+      <td width="4" bgcolor="${stripeColor ?? c.accent}" style="width:4px;font-size:0;line-height:0;">&nbsp;</td>
+      <td style="padding:8px 18px 18px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          ${rows.map(([label, value, valueColor]) => detailRow(label, value, valueColor)).join("")}
+        </table>
+      </td>
+    </tr>
+  </table>`;
+};
+
+export interface DocumentUploadedEmailInput {
+  recipientName?: string;
+  // Öğrenciye giden e-postada danışmanın yalnızca adı geçer, iletişim bilgisi
+  // geçmez - bkz. /me/consultant kolon seti.
+  uploaderName: string;
+  documentName: string;
+  documentTypeName: string;
+  url: string;
+  uploadedAt?: Date;
+}
+
+const documentUploadedEmail = (
+  {
+    recipientName,
+    uploaderName,
+    documentName,
+    documentTypeName,
+    url,
+    uploadedAt,
+  }: DocumentUploadedEmailInput,
+  copy: {
+    subjectLead: string;
+    heading: string;
+    sentenceHtml: (uploaderNameHtml: string) => string;
+    sentenceText: string;
+    uploaderLabel: string;
+    actionLabel: string;
+    footnoteHtml: string;
+    footnoteText: string;
+  },
+): EmailContent => {
+  const rows: DetailRowTuple[] = [
+    ["Belge", documentName],
+    ["Belge türü", documentTypeName],
+    [copy.uploaderLabel, uploaderName],
+  ];
+  if (uploadedAt) rows.push(["Yüklenme", dateTimeFormatter.format(uploadedAt)]);
+
+  return {
+    subject: `${copy.subjectLead}: ${documentName} · ${brand.name}`,
+    text: plain([
+      greeting(recipientName),
+      "",
+      copy.sentenceText,
+      "",
+      `Belge: ${documentName}`,
+      `Belge türü: ${documentTypeName}`,
+      `${copy.uploaderLabel}: ${uploaderName}`,
+      ...(uploadedAt
+        ? [`Yüklenme: ${dateTimeFormatter.format(uploadedAt)}`]
+        : []),
+      "",
+      "Panele gitmek için:",
+      url,
+      "",
+      copy.footnoteText,
+    ]),
+    html: layout({
+      subject: copy.heading,
+      preheader: `${documentTypeName} · ${documentName}`,
+      heading: copy.heading,
+      bodyHtml: `<p style="margin:0 0 14px;">${escapeHtml(greeting(recipientName))}</p>
+             <p style="margin:0;">${copy.sentenceHtml(`<strong style="color:${brand.colors.primary};">${escapeHtml(uploaderName)}</strong>`)}</p>
+             ${detailCard(rows)}`,
+      action: { url, label: copy.actionLabel },
+      footnoteHtml: copy.footnoteHtml,
+    }),
+  };
+};
+
+export const documentUploadedForConsultantEmail = (
+  input: DocumentUploadedEmailInput,
+): EmailContent =>
+  documentUploadedEmail(input, {
+    subjectLead: "Öğrenciniz yeni bir belge yükledi",
+    heading: "Yeni bir belge yüklendi",
+    sentenceHtml: (name) =>
+      `Öğrenciniz ${name} yeni bir belge yükledi. Belgeyi panelinizden inceleyebilirsiniz.`,
+    sentenceText:
+      "Öğrencilerinizden biri yeni bir belge yükledi. Belgeyi panelinizden inceleyebilirsiniz.",
+    uploaderLabel: "Öğrenci",
+    actionLabel: "Panelde incele",
+    footnoteHtml:
+      "Belgeyi inceledikten sonra panelden onaylayabilir ya da reddedebilirsiniz. Öğrenci, belgenin inceleme durumunu kendi hesabından takip eder.",
+    footnoteText:
+      "Belgeyi inceledikten sonra panelden onaylayabilir ya da reddedebilirsiniz.",
+  });
+
+export const documentUploadedForStudentEmail = (
+  input: DocumentUploadedEmailInput,
+): EmailContent =>
+  documentUploadedEmail(input, {
+    subjectLead: "Hesabınıza yeni bir belge eklendi",
+    heading: "Hesabınıza yeni bir belge eklendi",
+    sentenceHtml: (name) =>
+      `Danışmanınız ${name} hesabınıza yeni bir belge ekledi. Belgeyi hesabınızdan görüntüleyebilir ve indirebilirsiniz.`,
+    sentenceText:
+      "Danışmanınız hesabınıza yeni bir belge ekledi. Belgeyi hesabınızdan görüntüleyebilir ve indirebilirsiniz.",
+    uploaderLabel: "Yükleyen danışman",
+    actionLabel: "Panelde görüntüle",
+    footnoteHtml:
+      "Belge, hesabınızdaki belgeler bölümünde listelenir. Bu belgeyle ilgili bir sorunuz varsa danışmanınıza panelden mesaj gönderebilirsiniz.",
+    footnoteText:
+      "Belge, hesabınızdaki belgeler bölümünde listelenir. Sorularınızı danışmanınıza panelden iletebilirsiniz.",
+  });
+
+export interface DocumentReviewedEmailInput {
+  recipientName?: string;
+  reviewerName: string;
+  documentName: string;
+  documentTypeName: string;
+  // Şemadan türetilmiyor: lib/email, db katmanına bağlanmasın.
+  reviewStatus: "accepted" | "rejected";
+  url: string;
+  reviewedAt?: Date;
+  // documents tablosunda henüz karşılığı yok (v2); gelmeden de doğru render eder.
+  reason?: string;
+}
+
+export const documentReviewedForStudentEmail = ({
+  recipientName,
+  reviewerName,
+  documentName,
+  documentTypeName,
+  reviewStatus,
+  url,
+  reviewedAt,
+  reason,
+}: DocumentReviewedEmailInput): EmailContent => {
+  const c = brand.colors;
+  const accepted = reviewStatus === "accepted";
+
+  const verdict = accepted ? "Onaylandı" : "Reddedildi";
+  const verdictColor = accepted ? c.success : c.danger;
+  const heading = accepted ? "Belgeniz onaylandı" : "Belgeniz reddedildi";
+  const sentence = accepted
+    ? "belgenizi inceledi ve onayladı. Bu belge için başka bir işlem yapmanıza gerek yok."
+    : "belgenizi inceledi ve reddetti. Belgeyi düzeltip yeniden yükleyebilirsiniz.";
+
+  const rows: DetailRowTuple[] = [
+    ["Belge", documentName],
+    ["Belge türü", documentTypeName],
+    ["Sonuç", verdict, verdictColor],
+    ["İnceleyen danışman", reviewerName],
+  ];
+  if (reviewedAt) rows.push(["İnceleme", dateTimeFormatter.format(reviewedAt)]);
+
+  const reasonHtml =
+    !accepted && reason
+      ? `<p style="margin:14px 0 0;"><strong style="color:${c.primary};">Gerekçe:</strong> ${escapeHtml(reason)}</p>`
+      : "";
+
+  return {
+    subject: `${heading}: ${documentName} · ${brand.name}`,
+    text: plain([
+      greeting(recipientName),
+      "",
+      `Danışmanınız ${reviewerName} ${sentence}`,
+      ...(!accepted && reason ? ["", `Gerekçe: ${reason}`] : []),
+      "",
+      `Belge: ${documentName}`,
+      `Belge türü: ${documentTypeName}`,
+      `Sonuç: ${verdict}`,
+      `İnceleyen danışman: ${reviewerName}`,
+      ...(reviewedAt
+        ? [`İnceleme: ${dateTimeFormatter.format(reviewedAt)}`]
+        : []),
+      "",
+      "Panele gitmek için:",
+      url,
+      "",
+      accepted
+        ? "Onaylanan belgeler başvuru dosyanızda kullanılır."
+        : "Belgeyi düzelttikten sonra aynı belge türü için yeni bir yükleme yapabilirsiniz.",
+    ]),
+    html: layout({
+      subject: heading,
+      preheader: `${documentTypeName} · ${documentName}`,
+      heading,
+      bodyHtml: `<p style="margin:0 0 14px;">${escapeHtml(greeting(recipientName))}</p>
+             <p style="margin:0;">Danışmanınız <strong style="color:${c.primary};">${escapeHtml(reviewerName)}</strong> ${escapeHtml(sentence)}</p>
+             ${reasonHtml}
+             ${detailCard(rows, verdictColor)}`,
+      action: {
+        url,
+        label: accepted ? "Panelde görüntüle" : "Panelde yeniden yükle",
+      },
+      footnoteHtml: accepted
+        ? "Onaylanan belgeler başvuru dosyanızda kullanılır. Belgenin güncel bir sürümü gerekirse danışmanınız sizi bilgilendirir."
+        : "Belgeyi düzelttikten sonra aynı belge türü için yeni bir yükleme yapabilirsiniz. Neyin eksik olduğundan emin değilseniz danışmanınıza panelden mesaj gönderebilirsiniz.",
+    }),
+  };
+};

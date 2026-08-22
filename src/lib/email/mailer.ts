@@ -1,7 +1,7 @@
 import nodemailer, { type Transporter } from "nodemailer";
 import { env } from "../../config/env.js";
 
-const isEmailConfigured = Boolean(
+export const isEmailConfigured = Boolean(
   env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS && env.SMTP_FROM,
 );
 
