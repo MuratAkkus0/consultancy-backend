@@ -15,6 +15,7 @@ const EnvSchema = z.object({
   // AWS
   AWS_STUDENT_DOCUMENTS_BUCKET_NAME: z.string(),
   AWS_REGION: z.string(),
+  AWS_REDIS_URL: z.string(),
 
   // SEED
   SEED_ADMIN_EMAIL: z.string().optional(),

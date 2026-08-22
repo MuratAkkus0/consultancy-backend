@@ -8,7 +8,7 @@ const PORT = env.APP_PORT;
 
 const server = http.createServer(app);
 
-initSocket(server);
+await initSocket(server);
 
 // Non-fatal SMTP probe: logs whether email is ready, never blocks startup.
 void verifyMailer();

@@ -18,6 +18,7 @@ jobs:
         node-version: [24.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
     env:
+      AWS_REDIS_URL: ${{secrets.REDIS_URL}}
       DATABASE_URL: ${{secrets.DATABASE_URL}}
       BETTER_AUTH_SECRET: ${{secrets.BETTER_AUTH_SECRET}}
       BETTER_AUTH_URL: ${{secrets.BETTER_AUTH_URL}}
