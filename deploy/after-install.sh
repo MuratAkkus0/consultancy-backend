@@ -8,7 +8,7 @@ chown -R admin:admin "$APP_DIR"
 
 cd "$APP_DIR"
 
-/home/admin/.nvm/versions/node/v24.19.0/bin/npm ci --omit=dev
+npm ci --omit=dev
 
 install \
   -m 0644 \
