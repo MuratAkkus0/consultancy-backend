@@ -3,13 +3,23 @@ import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "./schema/index.js";
 import { config } from "../config/index.js";
+import fs from "fs";
 
 const pool = new Pool({
   connectionString: config.db.url,
   min: config.db.poolMin,
   max: config.db.poolMax,
   idleTimeoutMillis: config.db.idleTimeoutMs,
-  ssl: config.isProd ? { rejectUnauthorized: true } : false,
+  connectionTimeoutMillis: 5_000,
+
+  application_name: "milestonegermany-backend",
+
+  ssl: config.isProd
+    ? {
+        rejectUnauthorized: true,
+        ca: fs.readFileSync("/etc/ssl/rds/global-bundle.pem", "utf8"),
+      }
+    : false,
 });
 
 // Connection error
