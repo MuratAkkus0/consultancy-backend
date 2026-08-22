@@ -11,7 +11,7 @@ for attempt in {1..12}; do
     "$URL" > /dev/null; then
 
     echo "Application is healthy."
-    exit 1
+    exit 0
   fi
 
   echo "Health check failed (attempt $attempt/12)"
