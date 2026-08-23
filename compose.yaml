@@ -2,11 +2,18 @@ services:
   db:
     image: postgres:18.4-alpine3.23
     container_name: postgres-db
-    env_file:
-      - ./.env
+    environment:
+      POSTGRES_DB: milestonegermany
+      POSTGRES_USER: milestonegermany
+      POSTGRES_PASSWORD: localdev
     ports:
       - 9002:5432
     volumes:
       - ./postgres-data:/var/lib/postgresql
+
+  redis:
+    image: valkey/valkey:8
+    ports:
+      - "6379:6379"
 volumes:
   postgres-data:
