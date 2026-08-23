@@ -41,9 +41,24 @@ export const auth = betterAuth({
   emailVerification: {
     // Fire a verification email automatically after sign-up.
     sendOnSignUp: true,
+    // The verify-email route redirects to the dashboard, which is protected;
+    // without a session here the user would be bounced back to login.
+    autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
+      // better-auth defaults callbackURL to "/" (the API root). Overwrite it so
+      // the redirect after verification always lands on the web app dashboard,
+      // whatever the client sent at sign-up.
+      const verifyUrl = new URL(url);
+      verifyUrl.searchParams.set(
+        "callbackURL",
+        new URL("/dashboard", env.APP_WEB_URL).toString(),
+      );
+
       try {
-        const mail = verifyEmail({ url, name: user.name });
+        const mail = verifyEmail({
+          url: verifyUrl.toString(),
+          name: user.name,
+        });
         await sendMail({ to: user.email, ...mail });
       } catch (err) {
         console.error("[auth] failed to send verification email:", err);
