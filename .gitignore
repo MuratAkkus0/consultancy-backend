@@ -16,3 +16,5 @@ postgres-data
 *.backup.ts
 
 .DS_Store
+
+*.md
