@@ -10,6 +10,21 @@ cd "$APP_DIR"
 
 npm ci --omit=dev
 
+# configure nginx
+install \
+  -m 0644 \
+  "$APP_DIR/deploy/nginx/conf.d/upgrade.conf" \
+  "/etc/nginx/conf.d/upgrade.conf"
+
+install \
+  -m 0644 \
+  "$APP_DIR/deploy/nginx/sites-available/milestone_backend" \
+  "/etc/nginx/sites-available/milestone_backend"
+
+nginx -t
+
+systemctl reload nginx
+
 install \
   -m 0644 \
   "$APP_DIR/deploy/$SERVICE_NAME" \

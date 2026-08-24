@@ -12,13 +12,4 @@ ENV_EXPORTS="$(
 )"
 eval "$ENV_EXPORTS"
 
-# configure nginx
-# copy upgrade.conf
-sudo cp /home/admin/consultancy-backend/deploy/nginx/conf.d/upgrade.conf /etc/nginx/conf.d/upgrade.conf
-# copy milestone_backend
-sudo cp /home/admin/consultancy-backend/deploy/nginx/sites-available/milestone_backend /etc/nginx/sites-available/milestone_backend
-
-sudo nginx -t && sudo systemctl reload nginx.service
-
-
 exec /usr/bin/node /home/admin/consultancy-backend/dist/server.js
