@@ -8,6 +8,8 @@ const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("production"),
 
   APP_PORT: z.coerce.number().int().positive().default(3001),
+  APP_WEB_URL: z.url(),
+  APP_WEB_HOST: z.string(),
 
   // DATABASE_URL — Postgres connection string
   DATABASE_URL: z.url(),
@@ -49,7 +51,6 @@ const EnvSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.email().optional(),
-  APP_WEB_URL: z.url(),
   SMTP_SECURE: z.coerce.boolean().default(true),
 });
 
