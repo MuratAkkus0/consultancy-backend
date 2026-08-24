@@ -14,9 +14,9 @@ eval "$ENV_EXPORTS"
 
 # configure nginx
 # copy upgrade.conf
-cp /home/admin/consultancy-backend/deploy/nginx/conf.d/upgrade.conf /etc/nginx/conf.d/upgrade.conf
+sudo cp /home/admin/consultancy-backend/deploy/nginx/conf.d/upgrade.conf /etc/nginx/conf.d/upgrade.conf
 # copy milestone_backend
-cp /home/admin/consultancy-backend/deploy/nginx/sites-available/milestone_backend /etc/nginx/sites-available/milestone_backend
+sudo cp /home/admin/consultancy-backend/deploy/nginx/sites-available/milestone_backend /etc/nginx/sites-available/milestone_backend
 
 sudo nginx -t && sudo systemctl reload nginx.service
 
