@@ -27,7 +27,6 @@ jobs:
       AWS_STUDENT_DOCUMENTS_BUCKET_NAME: ${{secrets.AWS_STUDENT_DOCUMENTS_BUCKET_NAME}}
       AWS_REGION: ${{vars.AWS_REGION}}
       APP_WEB_URL: ${{vars.APP_WEB_URL}}
-      APP_WEB_HOST: ${{vars.APP_WEB_HOST}}
 
     steps:
       - uses: actions/checkout@v6

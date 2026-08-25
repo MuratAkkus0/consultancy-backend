@@ -7,7 +7,6 @@ import { eq } from "drizzle-orm";
 import { users } from "../db/index.js";
 import { sendMail } from "./email/mailer.js";
 import { resetPasswordEmail, verifyEmail } from "./email/templates.js";
-import { config } from "../config/config.js";
 
 export const auth = betterAuth({
   experimental: { joins: true },
@@ -23,9 +22,7 @@ export const auth = betterAuth({
   },
   advanced: {
     database: { generateId: () => randomUUID() },
-    ...(config.isProd && {
-      crossSubDomainCookies: { enabled: true, domain: `.${env.APP_WEB_HOST}` },
-    }),
+    cookiePrefix: "milestone",
   },
   emailAndPassword: {
     enabled: true,
