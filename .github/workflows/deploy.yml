@@ -23,6 +23,7 @@ env:
   ALLOWED_ORIGINS: ${{secrets.ALLOWED_ORIGINS}}
   TRUSTED_PROXY_HOPS: ${{secrets.TRUSTED_PROXY_HOPS}}
   APP_WEB_URL: ${{vars.APP_WEB_URL}}
+  APP_WEB_HOST: ${{vars.APP_WEB_HOST}}
 
 jobs:
   deploy:

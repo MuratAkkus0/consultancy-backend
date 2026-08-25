@@ -9,6 +9,7 @@ const EnvSchema = z.object({
 
   APP_PORT: z.coerce.number().int().positive().default(3001),
   APP_WEB_URL: z.url(),
+  APP_WEB_HOST: z.string(),
 
   // DATABASE_URL — Postgres connection string
   DATABASE_URL: z.url(),
