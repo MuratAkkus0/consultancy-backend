@@ -10,6 +10,7 @@ import { env } from "../../config/env.js";
 import { isEmailConfigured, sendMail } from "../../lib/email/mailer.js";
 import {
   documentReviewedForStudentEmail,
+  documentUploadedByAdminForStudentEmail,
   documentUploadedForConsultantEmail,
   documentUploadedForStudentEmail,
 } from "../../lib/email/templates.js";
@@ -117,6 +118,19 @@ export const notifyDocumentUploaded = (document: NotifiableDocument): void =>
       return;
     }
 
+    if (counterpart.role === "admin") {
+      await sendMail({
+        to: student.email,
+        ...documentUploadedByAdminForStudentEmail({
+          recipientName: student.name,
+          ...shared,
+        }),
+      });
+      return;
+    }
+
+    // Kalan tek geçerli yükleyici danışman; başka bir rol (ör. başka bir
+    // öğrenci) buraya düşerse sessizce bırakılır.
     if (counterpart.role !== "consultant") return;
 
     await sendMail({

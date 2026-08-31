@@ -298,15 +298,18 @@ const detailCard = (rows: DetailRowTuple[], stripeColor?: string) => {
   </table>`;
 };
 
-export interface DocumentUploadedEmailInput {
+export interface DocumentUploadedEmailBase {
   recipientName?: string;
-  // Öğrenciye giden e-postada danışmanın yalnızca adı geçer, iletişim bilgisi
-  // geçmez - bkz. /me/consultant kolon seti.
-  uploaderName: string;
   documentName: string;
   documentTypeName: string;
   url: string;
   uploadedAt?: Date;
+}
+
+export interface DocumentUploadedEmailInput extends DocumentUploadedEmailBase {
+  // Öğrenciye giden e-postada danışmanın yalnızca adı geçer, iletişim bilgisi
+  // geçmez - bkz. /me/consultant kolon seti.
+  uploaderName: string;
 }
 
 const documentUploadedEmail = (
@@ -317,23 +320,27 @@ const documentUploadedEmail = (
     documentTypeName,
     url,
     uploadedAt,
-  }: DocumentUploadedEmailInput,
+  }: DocumentUploadedEmailBase & { uploaderName?: string },
   copy: {
     subjectLead: string;
     heading: string;
+    // Yükleyeni açıklamayan varyantlarda boş string gelir.
     sentenceHtml: (uploaderNameHtml: string) => string;
     sentenceText: string;
-    uploaderLabel: string;
+    // Yalnızca uploaderName ile birlikte anlamlı; ikisi de yoksa satır düşer.
+    uploaderLabel?: string;
     actionLabel: string;
     footnoteHtml: string;
     footnoteText: string;
   },
 ): EmailContent => {
+  const showUploader = Boolean(copy.uploaderLabel && uploaderName);
+
   const rows: DetailRowTuple[] = [
     ["Belge", documentName],
     ["Belge türü", documentTypeName],
-    [copy.uploaderLabel, uploaderName],
   ];
+  if (showUploader) rows.push([copy.uploaderLabel!, uploaderName!]);
   if (uploadedAt) rows.push(["Yüklenme", dateTimeFormatter.format(uploadedAt)]);
 
   return {
@@ -345,7 +352,7 @@ const documentUploadedEmail = (
       "",
       `Belge: ${documentName}`,
       `Belge türü: ${documentTypeName}`,
-      `${copy.uploaderLabel}: ${uploaderName}`,
+      ...(showUploader ? [`${copy.uploaderLabel}: ${uploaderName}`] : []),
       ...(uploadedAt
         ? [`Yüklenme: ${dateTimeFormatter.format(uploadedAt)}`]
         : []),
@@ -360,7 +367,7 @@ const documentUploadedEmail = (
       preheader: `${documentTypeName} · ${documentName}`,
       heading: copy.heading,
       bodyHtml: `<p style="margin:0 0 14px;">${escapeHtml(greeting(recipientName))}</p>
-             <p style="margin:0;">${copy.sentenceHtml(`<strong style="color:${brand.colors.primary};">${escapeHtml(uploaderName)}</strong>`)}</p>
+             <p style="margin:0;">${copy.sentenceHtml(showUploader ? `<strong style="color:${brand.colors.primary};">${escapeHtml(uploaderName!)}</strong>` : "")}</p>
              ${detailCard(rows)}`,
       action: { url, label: copy.actionLabel },
       footnoteHtml: copy.footnoteHtml,
@@ -397,6 +404,26 @@ export const documentUploadedForStudentEmail = (
     sentenceText:
       "Danışmanınız hesabınıza yeni bir belge ekledi. Belgeyi hesabınızdan görüntüleyebilir ve indirebilirsiniz.",
     uploaderLabel: "Yükleyen danışman",
+    actionLabel: "Panelde görüntüle",
+    footnoteHtml:
+      "Belge, hesabınızdaki belgeler bölümünde listelenir. Bu belgeyle ilgili bir sorunuz varsa danışmanınıza panelden mesaj gönderebilirsiniz.",
+    footnoteText:
+      "Belge, hesabınızdaki belgeler bölümünde listelenir. Sorularınızı danışmanınıza panelden iletebilirsiniz.",
+  });
+
+// Admin yüklemeleri için nötr varyant: öğrenci belgeden haberdar olur ama
+// yükleyenin kimliği paylaşılmaz - admin, öğrenciye "danışmanınız" gibi
+// görünmemeli ve panelde muhatabı da değil.
+export const documentUploadedByAdminForStudentEmail = (
+  input: DocumentUploadedEmailBase,
+): EmailContent =>
+  documentUploadedEmail(input, {
+    subjectLead: "Hesabınıza yeni bir belge eklendi",
+    heading: "Hesabınıza yeni bir belge eklendi",
+    sentenceHtml: () =>
+      "Hesabınıza yeni bir belge eklendi. Belgeyi hesabınızdan görüntüleyebilir ve indirebilirsiniz.",
+    sentenceText:
+      "Hesabınıza yeni bir belge eklendi. Belgeyi hesabınızdan görüntüleyebilir ve indirebilirsiniz.",
     actionLabel: "Panelde görüntüle",
     footnoteHtml:
       "Belge, hesabınızdaki belgeler bölümünde listelenir. Bu belgeyle ilgili bir sorunuz varsa danışmanınıza panelden mesaj gönderebilirsiniz.",
