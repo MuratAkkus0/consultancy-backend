@@ -129,8 +129,7 @@ export const notifyDocumentUploaded = (document: NotifiableDocument): void =>
       return;
     }
 
-    // Kalan tek geçerli yükleyici danışman; başka bir rol (ör. başka bir
-    // öğrenci) buraya düşerse sessizce bırakılır.
+    // Any other role reaching here is left unnotified on purpose.
     if (counterpart.role !== "consultant") return;
 
     await sendMail({

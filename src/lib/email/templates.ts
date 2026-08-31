@@ -24,8 +24,6 @@ const brand = {
     muted: "#4b5563",
     subtle: "#9ca3af",
     line: "#e5e7eb",
-    // Inceleme sonucu bildirimleri icin. Lacivert/altin paletle cakismasin
-    // diye ikisi de doygunlugu dusuk, koyu tonlar.
     success: "#15803d",
     danger: "#b91c1c",
   },
@@ -45,7 +43,6 @@ const escapeHtml = (value: string) =>
 
 interface LayoutInput {
   subject: string;
-  // Shown by inboxes next to the subject line; kept out of the visible body.
   preheader: string;
   heading: string;
   // Trusted HTML: built by the exporters below, never raw user input.
@@ -54,10 +51,7 @@ interface LayoutInput {
   footnoteHtml: string;
 }
 
-// Shared shell so every email looks the same. Tables and inline styles only -
-// Outlook ignores modern layout, and most clients strip <style> rules. The one
-// <style> block is a progressive enhancement for mobile: where it is dropped the
-// inline styles still render a correct email.
+// Tables and inline styles only: Outlook ignores modern layout and most clients strip <style>.
 const layout = ({
   subject,
   preheader,
@@ -185,7 +179,6 @@ const layout = ({
 const greeting = (name?: string) =>
   name ? `Merhaba ${name.trim()},` : "Merhaba,";
 
-// Same frame for every plaintext part, so the fallback carries the brand too.
 const plain = (lines: string[]) =>
   [
     ...lines,
@@ -263,9 +256,7 @@ export const verifyEmail = ({
   }),
 });
 
-// Tek örnek: Intl formatter kurulumu pahalı, her e-postada yeniden yaratmayalım.
-// Saat dilimi sabit (Europe/Berlin) — sunucu TZ'i değişse de e-postadaki saat
-// alıcı için aynı anlama gelsin.
+// Timezone is pinned so a change in the server's TZ cannot shift the time recipients read.
 const dateTimeFormatter = new Intl.DateTimeFormat("tr-TR", {
   dateStyle: "long",
   timeStyle: "short",
@@ -282,8 +273,7 @@ const detailRow = (label: string, value: string, valueColor?: string) => {
 
 type DetailRowTuple = [label: string, value: string, valueColor?: string];
 
-// Şerit border-left yerine ayrı bir hücre: Outlook td border'larını yer yer
-// yutuyor.
+// Stripe is its own cell, not a border-left: Outlook drops td borders.
 const detailCard = (rows: DetailRowTuple[], stripeColor?: string) => {
   const c = brand.colors;
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 0;background:${c.surface};border:1px solid ${c.line};border-radius:12px;overflow:hidden;">
@@ -307,8 +297,6 @@ export interface DocumentUploadedEmailBase {
 }
 
 export interface DocumentUploadedEmailInput extends DocumentUploadedEmailBase {
-  // Öğrenciye giden e-postada danışmanın yalnızca adı geçer, iletişim bilgisi
-  // geçmez - bkz. /me/consultant kolon seti.
   uploaderName: string;
 }
 
@@ -324,10 +312,9 @@ const documentUploadedEmail = (
   copy: {
     subjectLead: string;
     heading: string;
-    // Yükleyeni açıklamayan varyantlarda boş string gelir.
+    // Receives an empty string in variants that do not name the uploader.
     sentenceHtml: (uploaderNameHtml: string) => string;
     sentenceText: string;
-    // Yalnızca uploaderName ile birlikte anlamlı; ikisi de yoksa satır düşer.
     uploaderLabel?: string;
     actionLabel: string;
     footnoteHtml: string;
@@ -411,9 +398,7 @@ export const documentUploadedForStudentEmail = (
       "Belge, hesabınızdaki belgeler bölümünde listelenir. Sorularınızı danışmanınıza panelden iletebilirsiniz.",
   });
 
-// Admin yüklemeleri için nötr varyant: öğrenci belgeden haberdar olur ama
-// yükleyenin kimliği paylaşılmaz - admin, öğrenciye "danışmanınız" gibi
-// görünmemeli ve panelde muhatabı da değil.
+// Admin uploads: the student is notified without being told who uploaded.
 export const documentUploadedByAdminForStudentEmail = (
   input: DocumentUploadedEmailBase,
 ): EmailContent =>
@@ -436,11 +421,10 @@ export interface DocumentReviewedEmailInput {
   reviewerName: string;
   documentName: string;
   documentTypeName: string;
-  // Şemadan türetilmiyor: lib/email, db katmanına bağlanmasın.
+  // Not derived from the schema on purpose: lib/email must not depend on the db layer.
   reviewStatus: "accepted" | "rejected";
   url: string;
   reviewedAt?: Date;
-  // documents tablosunda henüz karşılığı yok (v2); gelmeden de doğru render eder.
   reason?: string;
 }
 
