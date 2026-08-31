@@ -101,7 +101,7 @@ export const documentsController = {
 
       const document =
         user.role === "admin"
-          ? await documentsService.reviewById(id, data)
+          ? await documentsService.reviewById(user.id, id, data)
           : await documentsService.reviewByIdForConsultant(user.id, id, data);
 
       res.json(document);

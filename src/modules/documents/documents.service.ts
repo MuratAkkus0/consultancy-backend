@@ -510,8 +510,8 @@ export const documentsService = {
   },
 
   // Admin reviews any uploaded document — no assignment scope.
-  reviewById: async (id: string, data: ReviewDocumentDTO) => {
-    const { document } = await applyReviewStatus(
+  reviewById: async (adminId: string, id: string, data: ReviewDocumentDTO) => {
+    const { document, changed } = await applyReviewStatus(
       and(
         eq(documentsTable.id, id),
         eq(documentsTable.status, "uploaded"),
@@ -519,6 +519,10 @@ export const documentsService = {
       ),
       data.reviewStatus,
     );
+
+    if (changed) {
+      notifyDocumentReviewed(adminId, document, data.reviewStatus);
+    }
 
     return toResponse(document);
   },

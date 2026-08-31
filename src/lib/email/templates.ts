@@ -416,9 +416,8 @@ export const documentUploadedByAdminForStudentEmail = (
       "Belge, hesabınızdaki belgeler bölümünde listelenir. Sorularınızı danışmanınıza panelden iletebilirsiniz.",
   });
 
-export interface DocumentReviewedEmailInput {
+export interface DocumentReviewedEmailBase {
   recipientName?: string;
-  reviewerName: string;
   documentName: string;
   documentTypeName: string;
   // Not derived from the schema on purpose: lib/email must not depend on the db layer.
@@ -428,7 +427,11 @@ export interface DocumentReviewedEmailInput {
   reason?: string;
 }
 
-export const documentReviewedForStudentEmail = ({
+export interface DocumentReviewedEmailInput extends DocumentReviewedEmailBase {
+  reviewerName: string;
+}
+
+const documentReviewedEmail = ({
   recipientName,
   reviewerName,
   documentName,
@@ -437,23 +440,29 @@ export const documentReviewedForStudentEmail = ({
   url,
   reviewedAt,
   reason,
-}: DocumentReviewedEmailInput): EmailContent => {
+}: DocumentReviewedEmailBase & { reviewerName?: string }): EmailContent => {
   const c = brand.colors;
   const accepted = reviewStatus === "accepted";
 
   const verdict = accepted ? "Onaylandı" : "Reddedildi";
   const verdictColor = accepted ? c.success : c.danger;
   const heading = accepted ? "Belgeniz onaylandı" : "Belgeniz reddedildi";
-  const sentence = accepted
-    ? "belgenizi inceledi ve onayladı. Bu belge için başka bir işlem yapmanıza gerek yok."
-    : "belgenizi inceledi ve reddetti. Belgeyi düzeltip yeniden yükleyebilirsiniz.";
+  const tail = accepted
+    ? "Bu belge için başka bir işlem yapmanıza gerek yok."
+    : "Belgeyi düzeltip yeniden yükleyebilirsiniz.";
+  // The named form continues after the reviewer's name, so it cannot be reused
+  // when the reviewer stays anonymous - each voice needs its own sentence.
+  const lead = (reviewerHtml?: string) =>
+    reviewerHtml
+      ? `Danışmanınız ${reviewerHtml} belgenizi inceledi ve ${accepted ? "onayladı" : "reddetti"}. ${tail}`
+      : `Belgeniz incelendi ve ${accepted ? "onaylandı" : "reddedildi"}. ${tail}`;
 
   const rows: DetailRowTuple[] = [
     ["Belge", documentName],
     ["Belge türü", documentTypeName],
     ["Sonuç", verdict, verdictColor],
-    ["İnceleyen danışman", reviewerName],
   ];
+  if (reviewerName) rows.push(["İnceleyen danışman", reviewerName]);
   if (reviewedAt) rows.push(["İnceleme", dateTimeFormatter.format(reviewedAt)]);
 
   const reasonHtml =
@@ -466,13 +475,13 @@ export const documentReviewedForStudentEmail = ({
     text: plain([
       greeting(recipientName),
       "",
-      `Danışmanınız ${reviewerName} ${sentence}`,
+      lead(reviewerName),
       ...(!accepted && reason ? ["", `Gerekçe: ${reason}`] : []),
       "",
       `Belge: ${documentName}`,
       `Belge türü: ${documentTypeName}`,
       `Sonuç: ${verdict}`,
-      `İnceleyen danışman: ${reviewerName}`,
+      ...(reviewerName ? [`İnceleyen danışman: ${reviewerName}`] : []),
       ...(reviewedAt
         ? [`İnceleme: ${dateTimeFormatter.format(reviewedAt)}`]
         : []),
@@ -489,7 +498,7 @@ export const documentReviewedForStudentEmail = ({
       preheader: `${documentTypeName} · ${documentName}`,
       heading,
       bodyHtml: `<p style="margin:0 0 14px;">${escapeHtml(greeting(recipientName))}</p>
-             <p style="margin:0;">Danışmanınız <strong style="color:${c.primary};">${escapeHtml(reviewerName)}</strong> ${escapeHtml(sentence)}</p>
+             <p style="margin:0;">${lead(reviewerName && `<strong style="color:${c.primary};">${escapeHtml(reviewerName)}</strong>`)}</p>
              ${reasonHtml}
              ${detailCard(rows, verdictColor)}`,
       action: {
@@ -502,3 +511,12 @@ export const documentReviewedForStudentEmail = ({
     }),
   };
 };
+
+export const documentReviewedForStudentEmail = (
+  input: DocumentReviewedEmailInput,
+): EmailContent => documentReviewedEmail(input);
+
+// Admin reviews: the student gets the verdict without being told who decided.
+export const documentReviewedByAdminForStudentEmail = (
+  input: DocumentReviewedEmailBase,
+): EmailContent => documentReviewedEmail(input);

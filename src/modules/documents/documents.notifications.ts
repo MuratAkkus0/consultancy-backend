@@ -9,6 +9,7 @@ import {
 import { env } from "../../config/env.js";
 import { isEmailConfigured, sendMail } from "../../lib/email/mailer.js";
 import {
+  documentReviewedByAdminForStudentEmail,
   documentReviewedForStudentEmail,
   documentUploadedByAdminForStudentEmail,
   documentUploadedForConsultantEmail,
@@ -155,18 +156,32 @@ export const notifyDocumentReviewed = (
     const student = person.get(document.studentId);
     const reviewer = person.get(reviewerId);
     if (!student || !reviewer || !documentTypeName) return;
+
+    const shared = {
+      recipientName: student.name,
+      documentName: document.documentName,
+      documentTypeName,
+      reviewStatus,
+      url: dashboardUrl,
+      reviewedAt: document.updatedAt,
+    };
+
+    if (reviewer.role === "admin") {
+      await sendMail({
+        to: student.email,
+        ...documentReviewedByAdminForStudentEmail(shared),
+      });
+      return;
+    }
+
+    // Any other role reaching here is left unnotified on purpose.
     if (reviewer.role !== "consultant") return;
 
     await sendMail({
       to: student.email,
       ...documentReviewedForStudentEmail({
-        recipientName: student.name,
+        ...shared,
         reviewerName: reviewer.name,
-        documentName: document.documentName,
-        documentTypeName,
-        reviewStatus,
-        url: dashboardUrl,
-        reviewedAt: document.updatedAt,
       }),
     });
   });
