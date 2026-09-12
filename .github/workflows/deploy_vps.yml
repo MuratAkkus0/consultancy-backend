@@ -48,9 +48,11 @@ jobs:
           SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_PORT: ${{ vars.VPS_PORT }}
+          VPS_USER: ${{ vars.VPS_USER }}
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
+
           # umask before the write: the key must never exist as world-readable,
           # not even for the instant between creating and chmod-ing it.
           (umask 077; printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key)
@@ -67,42 +69,44 @@ jobs:
             exit 1
           fi
 
+          # One alias for every later step. ssh takes -p for the port but scp
+          # takes -P, so a shared options string silently breaks one of them.
+          (umask 077; cat > ~/.ssh/config <<EOF
+          Host vps
+            HostName $VPS_HOST
+            Port $VPS_PORT
+            User $VPS_USER
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+          EOF
+          )
+
           ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
           test -s ~/.ssh/known_hosts || { echo "ssh-keyscan returned nothing" >&2; exit 1; }
+
+          ssh vps 'echo "ssh reachable as $(whoami)"'
 
       - name: Upload environment file
         env:
           ENV_FILE: ${{ secrets.VPS_ENV_FILE }}
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_PORT: ${{ vars.VPS_PORT }}
-          VPS_USER: ${{ vars.VPS_USER }}
           APP_ROOT: ${{ vars.VPS_APP_ROOT }}
         run: |
           set -euo pipefail
           test -n "$ENV_FILE" || { echo "VPS_ENV_FILE secret is empty" >&2; exit 1; }
           # Piped through stdin so the value never appears in a command line,
           # where 'ps' on the runner would expose it.
-          printf '%s\n' "$ENV_FILE" | ssh \
-            -i ~/.ssh/deploy_key \
-            -o IdentitiesOnly=yes \
-            -p "$VPS_PORT" \
-            "$VPS_USER@$VPS_HOST" \
+          printf '%s\n' "$ENV_FILE" | ssh vps \
             "umask 077 && cat > '$APP_ROOT/shared/.env' && chmod 640 '$APP_ROOT/shared/.env'"
 
       - name: Upload release bundle
         env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_PORT: ${{ vars.VPS_PORT }}
-          VPS_USER: ${{ vars.VPS_USER }}
           APP_ROOT: ${{ vars.VPS_APP_ROOT }}
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          SSH_OPTS="-i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -p $VPS_PORT"
-          # shellcheck disable=SC2086
-          scp $SSH_OPTS release.tgz "$VPS_USER@$VPS_HOST:/tmp/release-$SHA.tgz"
-          # shellcheck disable=SC2086
-          ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "
+          scp release.tgz "vps:/tmp/release-$SHA.tgz"
+          ssh vps "
             set -euo pipefail
             mkdir -p '$APP_ROOT/releases/$SHA'
             tar xzf '/tmp/release-$SHA.tgz' -C '$APP_ROOT/releases/$SHA'
@@ -111,21 +115,13 @@ jobs:
 
       - name: Activate release
         env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_PORT: ${{ vars.VPS_PORT }}
-          VPS_USER: ${{ vars.VPS_USER }}
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           # 'bash -s' streams the script from this repo, so the server never
           # holds a stale copy of it.
-          ssh \
-            -i ~/.ssh/deploy_key \
-            -o IdentitiesOnly=yes \
-            -p "$VPS_PORT" \
-            "$VPS_USER@$VPS_HOST" \
-            'bash -s' -- "$SHA" < deploy/remote-release.sh
+          ssh vps 'bash -s' -- "$SHA" < deploy/remote-release.sh
 
-      - name: Remove SSH key
+      - name: Remove SSH credentials
         if: always()
-        run: rm -f ~/.ssh/deploy_key
+        run: rm -f ~/.ssh/deploy_key ~/.ssh/config
