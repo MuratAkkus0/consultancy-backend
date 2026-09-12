@@ -18,6 +18,8 @@ const EnvSchema = z.object({
   AWS_STUDENT_DOCUMENTS_BUCKET_NAME: z.string(),
   AWS_REGION: z.string(),
   AWS_REDIS_URL: z.string(),
+  AWS_ACCESS_KEY_ID: z.string(),
+  AWS_SECRET_ACCESS_KEY: z.string(),
 
   // SEED
   SEED_ADMIN_EMAIL: z.string().optional(),
