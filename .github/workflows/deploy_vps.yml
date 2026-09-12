@@ -54,6 +54,19 @@ jobs:
           # umask before the write: the key must never exist as world-readable,
           # not even for the instant between creating and chmod-ing it.
           (umask 077; printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key)
+
+          # Fail here with a readable message instead of a bare
+          # "error in libcrypto" three steps later. The header lines and the
+          # line count are not secret, so they are safe to print.
+          if ! ssh-keygen -y -P "" -f ~/.ssh/deploy_key > /dev/null 2>&1; then
+            echo "VPS_SSH_KEY is not a usable private key." >&2
+            echo "  lines:      $(wc -l < ~/.ssh/deploy_key)" >&2
+            echo "  first line: $(head -1 ~/.ssh/deploy_key)" >&2
+            echo "  last line:  $(tail -1 ~/.ssh/deploy_key)" >&2
+            echo "Expected BEGIN/END markers and the original line breaks." >&2
+            exit 1
+          fi
+
           ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
           test -s ~/.ssh/known_hosts || { echo "ssh-keyscan returned nothing" >&2; exit 1; }
 
