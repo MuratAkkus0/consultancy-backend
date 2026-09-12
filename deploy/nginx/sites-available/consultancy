@@ -1,0 +1,81 @@
+# Shared proxy headers for all three apps.
+# Kept in one file so a change cannot be applied to only some of them.
+
+# --- frontend (default) -----------------------------------------------------
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    server_name _ 62.83.9.222.nip.io;
+
+    client_max_body_size 20m;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        $connection_upgrade;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+        proxy_set_header X-Forwarded-Host  $host;
+    }
+}
+
+# --- backend API ------------------------------------------------------------
+server {
+    listen 80;
+    listen [::]:80;
+
+    server_name api.62.83.9.222.nip.io;
+
+    client_max_body_size 20m;
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+
+        # socket.io lives here, so the upgrade headers are not optional.
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        $connection_upgrade;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+        proxy_set_header X-Forwarded-Host  $host;
+
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+        proxy_buffering off;
+    }
+}
+
+# --- CMS (Strapi) -----------------------------------------------------------
+server {
+    listen 80;
+    listen [::]:80;
+
+    server_name cms.62.83.9.222.nip.io;
+
+    # Media goes through nginx on its way into the CMS, unlike the backend
+    # which hands out presigned S3 URLs.
+    client_max_body_size 200m;
+
+    location / {
+        proxy_pass http://127.0.0.1:1337;
+        proxy_http_version 1.1;
+
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        $connection_upgrade;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+        proxy_set_header X-Forwarded-Host  $host;
+
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+    }
+}
