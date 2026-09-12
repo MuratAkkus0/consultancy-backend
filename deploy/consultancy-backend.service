@@ -1,0 +1,25 @@
+# /etc/systemd/system/consultancy-backend.service
+[Unit]
+Description=Consultancy Backend API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+User=deploy
+Group=deploy
+WorkingDirectory=/srv/consultancy-backend/current
+EnvironmentFile=/srv/consultancy-backend/shared/.env
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+
+ExecStart=/usr/bin/node /srv/consultancy-backend/current/dist/server.js
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
