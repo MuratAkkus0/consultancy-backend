@@ -26,6 +26,7 @@ export const config = {
 
   db: {
     url: env.DATABASE_URL,
+    sslCa: env.DATABASE_SSL_CA,
     poolMin: 2,
     poolMax: 10,
     idleTimeoutMs: 30_000,

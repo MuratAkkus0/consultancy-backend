@@ -14,10 +14,12 @@ const pool = new Pool({
 
   application_name: "milestonegermany-backend",
 
-  ssl: config.isProd
+  // TLS follows the CA bundle, not NODE_ENV: a production database reached
+  // over loopback has nothing to encrypt.
+  ssl: config.db.sslCa
     ? {
         rejectUnauthorized: true,
-        ca: fs.readFileSync("/etc/ssl/rds/global-bundle.pem", "utf8"),
+        ca: fs.readFileSync(config.db.sslCa, "utf8"),
       }
     : false,
 });

@@ -13,6 +13,9 @@ const EnvSchema = z.object({
 
   // DATABASE_URL — Postgres connection string
   DATABASE_URL: z.url(),
+  // Path to a CA bundle. Set it only when the database is reached over an
+  // untrusted network; a loopback connection needs no TLS.
+  DATABASE_SSL_CA: z.string().optional(),
 
   // AWS
   AWS_STUDENT_DOCUMENTS_BUCKET_NAME: z.string(),
