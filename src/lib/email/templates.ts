@@ -7,10 +7,10 @@ export interface EmailContent {
 }
 
 const brand = {
-  name: "Milestone Education Germany",
+  name: "Campus69",
   siteUrl: env.APP_WEB_URL,
   logoUrl: `${env.APP_WEB_URL}/images/logo-yatay-colored.png`,
-  supportEmail: "info@milestonegermany.de",
+  supportEmail: "info@campus69.de",
   phone: "+49 160 8520519",
   phoneHref: "+491608520519",
   whatsappUrl: "https://wa.me/491608520519",
@@ -156,7 +156,7 @@ const layout = ({
                 <span style="color:${c.line};">·</span>
                 <a href="tel:${escapeHtml(brand.phoneHref)}" style="color:${c.muted};text-decoration:none;white-space:nowrap;">${escapeHtml(brand.phone)}</a>
                 <span style="color:${c.line};">·</span>
-                <a href="${escapeHtml(brand.siteUrl)}" style="color:${c.muted};text-decoration:none;white-space:nowrap;">milestonegermany.de</a>
+                <a href="${escapeHtml(brand.siteUrl)}" style="color:${c.muted};text-decoration:none;white-space:nowrap;">campus69.de</a>
               </div>
               <div style="margin-top:12px;color:${c.subtle};">
                 Bu otomatik bir bilgilendirme e-postasıdır, lütfen yanıtlamayın.<br />
@@ -204,7 +204,7 @@ export const resetPasswordEmail = ({
   text: plain([
     greeting(name),
     "",
-    "Milestone Education Germany hesabınız için bir şifre sıfırlama isteği aldık.",
+    "Campus69 hesabınız için bir şifre sıfırlama isteği aldık.",
     "Yeni şifrenizi belirlemek için aşağıdaki bağlantıyı açın:",
     "",
     url,
@@ -236,7 +236,7 @@ export const verifyEmail = ({
   text: plain([
     greeting(name),
     "",
-    "Milestone Education Germany'ye hoş geldiniz.",
+    "Campus69'a hoş geldiniz.",
     "Hesabınızı etkinleştirmek için e-posta adresinizi aşağıdaki bağlantıdan doğrulayın:",
     "",
     url,

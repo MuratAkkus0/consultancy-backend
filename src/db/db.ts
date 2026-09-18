@@ -12,7 +12,7 @@ const pool = new Pool({
   idleTimeoutMillis: config.db.idleTimeoutMs,
   connectionTimeoutMillis: 5_000,
 
-  application_name: "milestonegermany-backend",
+  application_name: "campus69-backend",
 
   // TLS follows the CA bundle, not NODE_ENV: a production database reached
   // over loopback has nothing to encrypt.

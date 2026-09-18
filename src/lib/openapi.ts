@@ -158,9 +158,9 @@ export function buildOpenApiDocument() {
   return {
     openapi: "3.0.0",
     info: {
-      title: "Milestonegermany API's",
+      title: "Campus69 API's",
       version: "1.0.0",
-      description: "Milestonegermany backend app",
+      description: "Campus69 backend app",
     },
     // Relative URL: "Try it out" requests target whatever origin the docs are
     // served from — localhost in dev, the Railway domain in prod. Always
