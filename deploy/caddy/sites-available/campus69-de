@@ -1,0 +1,26 @@
+campus69.de {
+	reverse_proxy :3000
+	handle_errors {
+		respond "{err.status_code} {err.status_text}"
+	}
+}
+
+www.campus69.de {
+	redir https://campus69.de{uri} permanent
+}
+
+api.campus69.de {
+	reverse_proxy :3001
+
+	handle_errors {
+		respond "{err.status_code} {err.status_text}"
+	}
+}
+
+cms.campus69.de {
+	reverse_proxy :1337
+
+	handle_errors {
+		respond "{err.status_code} {err.status_text}"
+	}
+}
