@@ -32,7 +32,14 @@ CADDY_BACKUP=""
 PUBLIC_HOST="api.campus69.de"
 PUBLIC_HEALTH_URL="https://$PUBLIC_HOST/health"
 
-cleanup() { [ -n "$CADDY_BACKUP" ] && rm -f "$CADDY_BACKUP"; }
+# An EXIT trap decides the script's exit status whenever the script ends without
+# an explicit 'exit', so this must not end on a false test: '[ -n "" ] && rm'
+# returns 1 and would fail a deploy that actually succeeded.
+cleanup() {
+  if [ -n "$CADDY_BACKUP" ]; then
+    rm -f "$CADDY_BACKUP"
+  fi
+}
 trap cleanup EXIT
 
 check_health() {
