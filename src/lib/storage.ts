@@ -17,7 +17,7 @@ const s3Client = new S3Client({
   credentials: config.s3.credentials,
 });
 
-const URL_TTL_SECONDS = 300;
+export const URL_TTL_SECONDS = 300;
 
 export const storage = {
   getUploadUrl: async (key: string, contentType: string) => {
