@@ -6,6 +6,7 @@ import {
   accounts,
   consultantProfilesTable,
   documentsTable,
+  pushSubscriptionsTable,
   sessions,
   studentProfilesTable,
   users,
@@ -72,6 +73,9 @@ export const anonymizeUser = async (userId: string, userRole: UserRole) => {
 
     await tx.delete(accounts).where(eq(accounts.userId, userId));
     await tx.delete(sessions).where(eq(sessions.userId, userId));
+    await tx
+      .delete(pushSubscriptionsTable)
+      .where(eq(pushSubscriptionsTable.userId, userId));
 
     const documents = await tx
       .delete(documentsTable)
@@ -122,6 +126,9 @@ export const softDeleteUser = async (userId: string, userRole: UserRole) => {
     }
 
     await tx.delete(sessions).where(eq(sessions.userId, userId));
+    await tx
+      .delete(pushSubscriptionsTable)
+      .where(eq(pushSubscriptionsTable.userId, userId));
 
     const documents = await tx
       .delete(documentsTable)

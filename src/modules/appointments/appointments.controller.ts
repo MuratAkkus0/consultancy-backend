@@ -11,6 +11,11 @@ import type {
   EditAppointmentDTO,
 } from "./appointments.types.js";
 import type { User } from "../../db/types.js";
+import {
+  notifyAppointmentCancelled,
+  notifyAppointmentCreated,
+  notifyAppointmentUpdated,
+} from "../notifications/push.notifications.js";
 
 export const appointmentsController = {
   create: async (req: Request, res: Response, next: NextFunction) => {
@@ -30,6 +35,8 @@ export const appointmentsController = {
           data,
         );
       }
+
+      if (appointment) notifyAppointmentCreated(appointment);
 
       res.status(201).json(appointment);
     } catch (err) {
@@ -109,6 +116,8 @@ export const appointmentsController = {
         );
       }
 
+      if (appointment) notifyAppointmentUpdated(appointment);
+
       res.json(appointment);
     } catch (err) {
       // Editing scheduledAt can also collide with an existing slot.
@@ -128,6 +137,7 @@ export const appointmentsController = {
     try {
       const { id } = req.params as unknown as UuidParam;
       const appointment = await appointmentsService.softDeleteById(id);
+      notifyAppointmentCancelled(appointment);
       res.json(appointment);
     } catch (err) {
       next(err);

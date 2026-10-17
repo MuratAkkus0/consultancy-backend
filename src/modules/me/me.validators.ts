@@ -124,3 +124,26 @@ export const editAdminSelfSchema = z
   .refine(atLeastOneGroup, {
     message: "At least one field must be provided.",
   });
+
+const base64UrlSchema = (maxLength: number) =>
+  z
+    .string()
+    .max(maxLength)
+    .regex(/^[A-Za-z0-9_-]+={0,2}$/);
+
+const pushEndpointSchema = z.url({ protocol: /^https$/ }).max(2048);
+
+// Mirrors PushSubscription.toJSON(). Real keys are far shorter than the caps
+// (p256dh ~87 chars, auth ~22); the caps only bound abusive input.
+export const createPushSubscriptionSchema = z.object({
+  endpoint: pushEndpointSchema,
+  expirationTime: z.number().int().nonnegative().nullable().optional(),
+  keys: z.object({
+    p256dh: base64UrlSchema(256),
+    auth: base64UrlSchema(64),
+  }),
+});
+
+export const deletePushSubscriptionSchema = z.object({
+  endpoint: pushEndpointSchema,
+});

@@ -8,6 +8,8 @@ import {
   validateQuery,
 } from "../../middleware/validate.middleware.js";
 import {
+  createPushSubscriptionSchema,
+  deletePushSubscriptionSchema,
   editAdminSelfSchema,
   editConsultantSelfSchema,
   editStudentSelfSchema,
@@ -461,6 +463,70 @@ router.get(
   requireAuth,
   requireRole("student"),
   meController.getRequiredDocuments,
+);
+
+// Web Push subscriptions for the authenticated user's browser/device.
+registerRoute({
+  method: "get",
+  path: "/api/v1/me/push-subscriptions/vapid-public-key",
+  tags: ["Me"],
+  summary: "Get the VAPID public key",
+  description:
+    "The application server key to pass to `pushManager.subscribe()`.",
+  responses: {
+    200: { description: "{ publicKey }" },
+    503: { description: "Push notifications are not configured" },
+    ...AUTH_ERRORS,
+  },
+});
+router.get(
+  "/push-subscriptions/vapid-public-key",
+  requireAuth,
+  meController.getVapidPublicKey,
+);
+
+registerRoute({
+  method: "post",
+  path: "/api/v1/me/push-subscriptions",
+  tags: ["Me"],
+  summary: "Register a push subscription",
+  description:
+    "Body is the browser's `PushSubscription.toJSON()`. Upserts on `endpoint`: an endpoint already registered by another user is reassigned to the caller. Responds 201 when newly created, 200 when an existing endpoint was updated. Keys are never returned.",
+  request: { body: createPushSubscriptionSchema },
+  responses: {
+    201: { description: "{ endpoint } - subscription created" },
+    200: { description: "{ endpoint } - existing subscription updated" },
+    400: { description: "Validation failed" },
+    503: { description: "Push notifications are not configured" },
+    ...AUTH_ERRORS,
+  },
+});
+router.post(
+  "/push-subscriptions",
+  requireAuth,
+  validateBody(createPushSubscriptionSchema),
+  meController.createPushSubscription,
+);
+
+registerRoute({
+  method: "delete",
+  path: "/api/v1/me/push-subscriptions",
+  tags: ["Me"],
+  summary: "Remove a push subscription",
+  description:
+    "Deletes the caller's subscription with the given endpoint. Idempotent: 204 even when nothing matched.",
+  request: { body: deletePushSubscriptionSchema },
+  responses: {
+    204: { description: "Subscription removed (or not found)" },
+    400: { description: "Validation failed" },
+    ...AUTH_ERRORS,
+  },
+});
+router.delete(
+  "/push-subscriptions",
+  requireAuth,
+  validateBody(deletePushSubscriptionSchema),
+  meController.deletePushSubscription,
 );
 
 export default router;

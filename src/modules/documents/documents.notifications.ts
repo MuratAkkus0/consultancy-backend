@@ -7,7 +7,16 @@ import {
   users,
 } from "../../db/index.js";
 import { env } from "../../config/env.js";
-import { isEmailConfigured, sendMail } from "../../lib/email/mailer.js";
+import {
+  isEmailConfigured,
+  sendMail,
+  type MailOptions,
+} from "../../lib/email/mailer.js";
+import {
+  isPushConfigured,
+  sendPushToUser,
+  type PushPayload,
+} from "../../lib/push.js";
 import {
   documentReviewedByAdminForStudentEmail,
   documentReviewedForStudentEmail,
@@ -17,7 +26,8 @@ import {
 } from "../../lib/email/templates.js";
 import type { ReviewDocumentDTO } from "./documents.types.js";
 
-const dashboardUrl = `${env.APP_WEB_URL}/dashboard`;
+const dashboardPath = "/dashboard";
+const dashboardUrl = `${env.APP_WEB_URL}${dashboardPath}`;
 
 export type NotifiableDocument = Pick<
   typeof documentsTable.$inferSelect,
@@ -27,6 +37,7 @@ export type NotifiableDocument = Pick<
 const NON_NOTIFIABLE_STATUSES = new Set(["soft_deleted", "deleted"]);
 
 interface Person {
+  id: string;
   name: string;
   email: string;
   role: "admin" | "consultant" | "student";
@@ -54,6 +65,7 @@ const loadContext = async (documentTypeId: string, personIds: string[]) => {
   for (const person of people) {
     if (person.status && NON_NOTIFIABLE_STATUSES.has(person.status)) continue;
     byId.set(person.id, {
+      id: person.id,
       name: person.name,
       email: person.email,
       role: person.role,
@@ -74,8 +86,21 @@ const loadActiveConsultantId = async (studentId: string) => {
   return assignment?.consultantId;
 };
 
+// Email and push are independent channels: each is a no-op when its own
+// transport is not configured, and a failure in one never blocks the other.
+const deliver = async (
+  userId: string,
+  email: MailOptions,
+  push: PushPayload,
+): Promise<void> => {
+  await Promise.all([
+    isEmailConfigured ? sendMail(email) : undefined,
+    sendPushToUser(userId, push),
+  ]);
+};
+
 const dispatch = (label: string, task: () => Promise<void>): void => {
-  if (!isEmailConfigured) return;
+  if (!isEmailConfigured && !isPushConfigured) return;
 
   void task().catch((error: unknown) => {
     console.error(`[documents.notifications] ${label} gönderilemedi:`, error);
@@ -106,41 +131,66 @@ export const notifyDocumentUploaded = (document: NotifiableDocument): void =>
       url: dashboardUrl,
       uploadedAt: document.updatedAt,
     };
+    const tag = `document:${document.id}`;
 
     if (selfUpload) {
-      await sendMail({
-        to: counterpart.email,
-        ...documentUploadedForConsultantEmail({
-          recipientName: counterpart.name,
-          uploaderName: student.name,
-          ...shared,
-        }),
-      });
+      await deliver(
+        counterpart.id,
+        {
+          to: counterpart.email,
+          ...documentUploadedForConsultantEmail({
+            recipientName: counterpart.name,
+            uploaderName: student.name,
+            ...shared,
+          }),
+        },
+        {
+          title: "Öğrenciniz yeni bir evrak yükledi",
+          body: `${student.name} yeni bir evrak yükledi.`,
+          url: dashboardPath,
+          tag,
+        },
+      );
       return;
     }
 
+    const studentPush: PushPayload = {
+      title: "Hesabınıza yeni bir evrak eklendi",
+      body: "Hesabınıza yeni bir evrak yüklendi.",
+      url: dashboardPath,
+      tag,
+    };
+
     if (counterpart.role === "admin") {
-      await sendMail({
-        to: student.email,
-        ...documentUploadedByAdminForStudentEmail({
-          recipientName: student.name,
-          ...shared,
-        }),
-      });
+      await deliver(
+        student.id,
+        {
+          to: student.email,
+          ...documentUploadedByAdminForStudentEmail({
+            recipientName: student.name,
+            ...shared,
+          }),
+        },
+        studentPush,
+      );
       return;
     }
 
     // Any other role reaching here is left unnotified on purpose.
     if (counterpart.role !== "consultant") return;
 
-    await sendMail({
-      to: student.email,
-      ...documentUploadedForStudentEmail({
-        recipientName: student.name,
-        uploaderName: counterpart.name,
-        ...shared,
-      }),
-    });
+    await deliver(
+      student.id,
+      {
+        to: student.email,
+        ...documentUploadedForStudentEmail({
+          recipientName: student.name,
+          uploaderName: counterpart.name,
+          ...shared,
+        }),
+      },
+      studentPush,
+    );
   });
 
 export const notifyDocumentReviewed = (
@@ -165,23 +215,37 @@ export const notifyDocumentReviewed = (
       url: dashboardUrl,
       reviewedAt: document.updatedAt,
     };
+    const push: PushPayload = {
+      title: "Evrakınız incelendi",
+      body: "Yüklediğiniz bir evrak incelendi.",
+      url: dashboardPath,
+      tag: `document:${document.id}`,
+    };
 
     if (reviewer.role === "admin") {
-      await sendMail({
-        to: student.email,
-        ...documentReviewedByAdminForStudentEmail(shared),
-      });
+      await deliver(
+        student.id,
+        {
+          to: student.email,
+          ...documentReviewedByAdminForStudentEmail(shared),
+        },
+        push,
+      );
       return;
     }
 
     // Any other role reaching here is left unnotified on purpose.
     if (reviewer.role !== "consultant") return;
 
-    await sendMail({
-      to: student.email,
-      ...documentReviewedForStudentEmail({
-        ...shared,
-        reviewerName: reviewer.name,
-      }),
-    });
+    await deliver(
+      student.id,
+      {
+        to: student.email,
+        ...documentReviewedForStudentEmail({
+          ...shared,
+          reviewerName: reviewer.name,
+        }),
+      },
+      push,
+    );
   });

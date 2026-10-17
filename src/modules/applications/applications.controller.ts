@@ -9,6 +9,10 @@ import type {
   EditApplicationDTO,
 } from "./applications.types.js";
 import type { User } from "../../db/types.js";
+import {
+  notifyApplicationCreated,
+  notifyApplicationUpdated,
+} from "../notifications/push.notifications.js";
 
 export const applicationsController = {
   create: async (req: Request, res: Response, next: NextFunction) => {
@@ -28,6 +32,8 @@ export const applicationsController = {
           data,
         );
       }
+
+      if (application) notifyApplicationCreated(application);
 
       res.status(201).json(application);
     } catch (err) {
@@ -89,16 +95,25 @@ export const applicationsController = {
       const user = req.user as User;
 
       let application;
+      let data: EditApplicationDTO | ConsultantEditApplicationDTO | undefined;
       if (user.role === "admin") {
-        const data = req.body as unknown as EditApplicationDTO;
+        data = req.body as EditApplicationDTO;
         application = await applicationsService.editById(id, data);
       } else if (user.role === "consultant") {
-        const data = req.body as unknown as ConsultantEditApplicationDTO;
+        data = req.body as ConsultantEditApplicationDTO;
         application = await applicationsService.editByIdForConsultant(
           id,
           user.id,
           data,
         );
+      }
+
+      // consultantNotes are never shown to the student.
+      const touchesStudentVisibleFields = Object.keys(data ?? {}).some(
+        (key) => key !== "consultantNotes",
+      );
+      if (application && touchesStudentVisibleFields) {
+        notifyApplicationUpdated(application);
       }
 
       res.json(application);

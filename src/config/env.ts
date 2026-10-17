@@ -57,6 +57,13 @@ const EnvSchema = z.object({
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.email().optional(),
   SMTP_SECURE: z.coerce.boolean().default(true),
+
+  // Web Push (VAPID). Push is enabled only when all three are set.
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z
+    .union([z.literal(""), z.string().regex(/^(mailto:|https:\/\/)/)])
+    .optional(),
 });
 
 // Validate

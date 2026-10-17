@@ -1,5 +1,7 @@
 import type z from "zod";
 import type {
+  createPushSubscriptionSchema,
+  deletePushSubscriptionSchema,
   editAdminSelfSchema,
   editConsultantSelfSchema,
   editStudentSelfSchema,
@@ -13,3 +15,10 @@ export type EditSelfDTO =
   | EditStudentSelfDTO
   | EditConsultantSelfDTO
   | EditAdminSelfDTO;
+
+export type CreatePushSubscriptionDTO = z.infer<
+  typeof createPushSubscriptionSchema
+>;
+export type DeletePushSubscriptionDTO = z.infer<
+  typeof deletePushSubscriptionSchema
+>;

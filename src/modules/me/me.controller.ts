@@ -1,7 +1,14 @@
 import type { NextFunction, Request, Response } from "express";
 import { meService } from "./me.service.js";
 import type { User, UserRole } from "../../db/types.js";
-import type { EditSelfDTO } from "./me.types.js";
+import type {
+  CreatePushSubscriptionDTO,
+  DeletePushSubscriptionDTO,
+  EditSelfDTO,
+} from "./me.types.js";
+import createHttpError from "http-errors";
+import { env } from "../../config/env.js";
+import { isPushConfigured } from "../../lib/push.js";
 import type { PaginationParams } from "../../lib/validators.js";
 import { coursesService } from "../courses/courses.service.js";
 import { paymentsService } from "../payments/payments.service.js";
@@ -22,6 +29,12 @@ import type {
   ConsultantEditAssignmentDTO,
   StudentEditAssignmentDTO,
 } from "../assignments/assignments.types.js";
+
+const assertPushConfigured = () => {
+  if (!isPushConfigured) {
+    throw createHttpError(503, "Push notifications are not configured.");
+  }
+};
 
 export const meController = {
   getProfile: async (req: Request, res: Response, next: NextFunction) => {
@@ -274,6 +287,48 @@ export const meController = {
       const { id } = req.user! as User;
       const data = await requiredDocumentsService.listForStudent(id);
       res.json(data);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  getVapidPublicKey: (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      assertPushConfigured();
+      res.json({ publicKey: env.VAPID_PUBLIC_KEY });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  createPushSubscription: async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      assertPushConfigured();
+      const data = req.body as CreatePushSubscriptionDTO;
+      const { created } = await meService.upsertPushSubscription(
+        req.user!.id,
+        data,
+        req.get("user-agent"),
+      );
+      res.status(created ? 201 : 200).json({ endpoint: data.endpoint });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  deletePushSubscription: async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { endpoint } = req.body as DeletePushSubscriptionDTO;
+      await meService.deletePushSubscription(req.user!.id, endpoint);
+      res.status(204).end();
     } catch (err) {
       next(err);
     }

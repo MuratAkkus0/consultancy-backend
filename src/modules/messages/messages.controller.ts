@@ -11,6 +11,7 @@ import type {
   SendMessageDTO,
 } from "./messages.types.js";
 import { getIo } from "../../lib/socket.js";
+import { notifyNewMessage } from "../notifications/push.notifications.js";
 
 export const messagesController = {
   listMessages: async (req: Request, res: Response, next: NextFunction) => {
@@ -45,6 +46,7 @@ export const messagesController = {
       if (message) {
         const io = getIo();
         io.to(`conversation:${conversationId}`).emit("message:new", message);
+        notifyNewMessage(message);
       }
 
       res.json(message);

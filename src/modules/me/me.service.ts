@@ -1,14 +1,16 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import createHttpError from "http-errors";
 import {
   adminProfilesTable,
   consultantProfilesTable,
   db,
+  pushSubscriptionsTable,
   studentProfilesTable,
   users,
 } from "../../db/index.js";
 import type { UserRole } from "../../db/types.js";
 import type {
+  CreatePushSubscriptionDTO,
   EditAdminSelfDTO,
   EditConsultantSelfDTO,
   EditSelfDTO,
@@ -107,5 +109,52 @@ export const meService = {
     const user = await anonymizeUser(id, userRole);
 
     return user;
+  },
+
+  // An endpoint identifies one browser install, so a re-registration (shared
+  // device, re-login as another user) takes the row over instead of failing.
+  upsertPushSubscription: async (
+    userId: string,
+    data: CreatePushSubscriptionDTO,
+    userAgent: string | undefined,
+  ) => {
+    const truncatedAgent = userAgent?.slice(0, 512);
+    const values = {
+      userId,
+      p256dh: data.keys.p256dh,
+      auth: data.keys.auth,
+      expirationTime:
+        typeof data.expirationTime === "number"
+          ? new Date(data.expirationTime)
+          : null,
+    };
+
+    // xmax is 0 only on a freshly inserted row.
+    const [row] = await db
+      .insert(pushSubscriptionsTable)
+      .values({
+        endpoint: data.endpoint,
+        ...values,
+        userAgent: truncatedAgent ?? null,
+      })
+      .onConflictDoUpdate({
+        target: pushSubscriptionsTable.endpoint,
+        // A re-registration without a User-Agent keeps the stored one.
+        set: userAgent ? { ...values, userAgent: truncatedAgent } : values,
+      })
+      .returning({ created: sql<boolean>`(xmax = 0)` });
+
+    return { created: row!.created };
+  },
+
+  deletePushSubscription: async (userId: string, endpoint: string) => {
+    await db
+      .delete(pushSubscriptionsTable)
+      .where(
+        and(
+          eq(pushSubscriptionsTable.userId, userId),
+          eq(pushSubscriptionsTable.endpoint, endpoint),
+        ),
+      );
   },
 };
