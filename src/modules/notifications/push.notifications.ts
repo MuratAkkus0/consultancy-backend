@@ -8,10 +8,13 @@ import {
 } from "../../lib/push.js";
 
 // Payload urls are relative paths; the service worker opens them on the
-// app's own origin.
-const URLS = {
-  messages: "/dashboard/messages",
-  dashboard: "/dashboard",
+// app's own origin. Every section opens the dashboard root for now, until the
+// frontend's section routes are settled.
+export const PUSH_URLS = {
+  messages: "/dashboard",
+  applications: "/dashboard",
+  appointments: "/dashboard",
+  documents: "/dashboard",
 } as const;
 
 const NON_NOTIFIABLE_STATUSES = ["soft_deleted", "deleted"] as const;
@@ -79,7 +82,7 @@ export const notifyNewMessage = (message: {
       {
         title: "Yeni mesajınız var",
         body: `${sender.name} size bir mesaj gönderdi.`,
-        url: URLS.messages,
+        url: PUSH_URLS.messages,
         tag: `conversation:${message.conversationId}`,
       },
       { urgency: "high" },
@@ -94,7 +97,7 @@ export const notifyApplicationCreated = (application: {
     sendToActiveUsers([application.studentId], {
       title: "Yeni başvurunuz var",
       body: "Danışmanınız sizin için yeni bir başvuru oluşturdu.",
-      url: URLS.dashboard,
+      url: PUSH_URLS.applications,
       tag: `application:${application.id}`,
     }),
   );
@@ -107,7 +110,7 @@ export const notifyApplicationUpdated = (application: {
     sendToActiveUsers([application.studentId], {
       title: "Başvurunuzda güncelleme var",
       body: "Başvurunuzla ilgili yeni bir güncelleme yapıldı.",
-      url: URLS.dashboard,
+      url: PUSH_URLS.applications,
       tag: `application:${application.id}`,
     }),
   );
@@ -120,7 +123,7 @@ export const notifyAppointmentCreated = (appointment: {
     sendToActiveUsers([appointment.studentId], {
       title: "Yeni randevunuz var",
       body: "Sizin için yeni bir randevu planlandı.",
-      url: URLS.dashboard,
+      url: PUSH_URLS.appointments,
       tag: `appointment:${appointment.id}`,
     }),
   );
@@ -133,7 +136,7 @@ export const notifyAppointmentUpdated = (appointment: {
     sendToActiveUsers([appointment.studentId], {
       title: "Randevunuzda güncelleme var",
       body: "Randevunuzla ilgili yeni bir güncelleme yapıldı.",
-      url: URLS.dashboard,
+      url: PUSH_URLS.appointments,
       tag: `appointment:${appointment.id}`,
     }),
   );
@@ -146,7 +149,7 @@ export const notifyAppointmentCancelled = (appointment: {
     sendToActiveUsers([appointment.studentId], {
       title: "Randevunuz iptal edildi",
       body: "Planlanan randevunuz iptal edildi.",
-      url: URLS.dashboard,
+      url: PUSH_URLS.appointments,
       tag: `appointment:${appointment.id}`,
     }),
   );

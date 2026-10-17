@@ -17,6 +17,7 @@ import {
   sendPushToUser,
   type PushPayload,
 } from "../../lib/push.js";
+import { PUSH_URLS } from "../notifications/push.notifications.js";
 import {
   documentReviewedByAdminForStudentEmail,
   documentReviewedForStudentEmail,
@@ -26,8 +27,7 @@ import {
 } from "../../lib/email/templates.js";
 import type { ReviewDocumentDTO } from "./documents.types.js";
 
-const dashboardPath = "/dashboard";
-const dashboardUrl = `${env.APP_WEB_URL}${dashboardPath}`;
+const dashboardUrl = `${env.APP_WEB_URL}/dashboard`;
 
 export type NotifiableDocument = Pick<
   typeof documentsTable.$inferSelect,
@@ -147,7 +147,7 @@ export const notifyDocumentUploaded = (document: NotifiableDocument): void =>
         {
           title: "Öğrenciniz yeni bir evrak yükledi",
           body: `${student.name} yeni bir evrak yükledi.`,
-          url: dashboardPath,
+          url: PUSH_URLS.documents,
           tag,
         },
       );
@@ -157,7 +157,7 @@ export const notifyDocumentUploaded = (document: NotifiableDocument): void =>
     const studentPush: PushPayload = {
       title: "Hesabınıza yeni bir evrak eklendi",
       body: "Hesabınıza yeni bir evrak yüklendi.",
-      url: dashboardPath,
+      url: PUSH_URLS.documents,
       tag,
     };
 
@@ -218,7 +218,7 @@ export const notifyDocumentReviewed = (
     const push: PushPayload = {
       title: "Evrakınız incelendi",
       body: "Yüklediğiniz bir evrak incelendi.",
-      url: dashboardPath,
+      url: PUSH_URLS.documents,
       tag: `document:${document.id}`,
     };
 
