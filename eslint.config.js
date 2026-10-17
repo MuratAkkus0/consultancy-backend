@@ -9,6 +9,7 @@ export default defineConfig([
       "dist/**",
       "coverage/**",
       "node_modules/**",
+      ".claude/**",
       "*.config.ts",
       "*.config.js",
     ],
