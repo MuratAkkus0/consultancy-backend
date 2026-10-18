@@ -125,7 +125,18 @@ export const applicationsController = {
   softDeleteById: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params as unknown as UuidParam;
-      const application = await applicationsService.softDeleteById(id);
+      const user = req.user as User;
+
+      let application;
+      if (user.role === "admin") {
+        application = await applicationsService.softDeleteById(id);
+      } else if (user.role === "consultant") {
+        application = await applicationsService.softDeleteByIdForConsultant(
+          id,
+          user.id,
+        );
+      }
+
       res.json(application);
     } catch (err) {
       next(err);

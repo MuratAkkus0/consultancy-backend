@@ -532,6 +532,28 @@ export const appointmentsService = {
     return appointment;
   },
 
+  // Past appointments are deletable too. A consultant who lost the student
+  // keeps the past ones (see reassignFutureForStudent) and can still delete them.
+  softDeleteByIdForConsultant: async (id: string, consultantId: string) => {
+    const [appointment] = await db
+      .update(appointmentsTable)
+      .set({ deletedAt: new Date() })
+      .where(
+        and(
+          eq(appointmentsTable.id, id),
+          eq(appointmentsTable.consultantId, consultantId),
+          isNull(appointmentsTable.deletedAt),
+        ),
+      )
+      .returning();
+
+    if (!appointment) {
+      throw createHttpError(404, "Appointment not found.");
+    }
+
+    return appointment;
+  },
+
   hardDeleteById: async (id: string) => {
     const [appointment] = await db
       .delete(appointmentsTable)

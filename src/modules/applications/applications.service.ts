@@ -335,6 +335,26 @@ export const applicationsService = {
     return application;
   },
 
+  softDeleteByIdForConsultant: async (id: string, consultantId: string) => {
+    const [application] = await db
+      .update(applicationsTable)
+      .set({ deletedAt: new Date() })
+      .where(
+        and(
+          eq(applicationsTable.id, id),
+          eq(applicationsTable.consultantId, consultantId),
+          isNull(applicationsTable.deletedAt),
+        ),
+      )
+      .returning();
+
+    if (!application) {
+      throw createHttpError(404, "Application not found.");
+    }
+
+    return application;
+  },
+
   hardDeleteById: async (id: string) => {
     const [application] = await db
       .delete(applicationsTable)

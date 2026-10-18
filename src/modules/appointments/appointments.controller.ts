@@ -136,8 +136,20 @@ export const appointmentsController = {
   softDeleteById: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params as unknown as UuidParam;
-      const appointment = await appointmentsService.softDeleteById(id);
-      notifyAppointmentCancelled(appointment);
+      const user = req.user as User;
+
+      let appointment;
+      if (user.role === "admin") {
+        appointment = await appointmentsService.softDeleteById(id);
+      } else if (user.role === "consultant") {
+        appointment = await appointmentsService.softDeleteByIdForConsultant(
+          id,
+          user.id,
+        );
+      }
+
+      if (appointment) notifyAppointmentCancelled(appointment);
+
       res.json(appointment);
     } catch (err) {
       next(err);

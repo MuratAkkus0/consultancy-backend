@@ -145,7 +145,7 @@ router.patch(
   appointmentsController.editById,
 );
 
-// Soft-delete an appointment - Admin only
+// Soft-delete an appointment - Admin (any) or consultant (only their own)
 registerRoute({
   method: "delete",
   path: "/api/v1/appointments/:id",
@@ -155,13 +155,13 @@ registerRoute({
   responses: {
     200: { description: "Appointment soft-deleted" },
     404: { description: "Appointment not found" },
-    ...ADMIN_ERRORS,
+    ...ADMIN_CONSULTANT_ERRORS,
   },
 });
 router.delete(
   "/:id",
   requireAuth,
-  requireRole("admin"),
+  requireRole("admin", "consultant"),
   validateParams(uuidParamSchema),
   appointmentsController.softDeleteById,
 );

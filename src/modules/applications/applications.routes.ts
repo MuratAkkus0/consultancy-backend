@@ -142,7 +142,7 @@ router.patch(
   applicationsController.editById,
 );
 
-// Soft-delete an application - Admin only
+// Soft-delete an application - Admin (any) or consultant (only their own)
 registerRoute({
   method: "delete",
   path: "/api/v1/applications/:id",
@@ -152,13 +152,13 @@ registerRoute({
   responses: {
     200: { description: "Application soft-deleted" },
     404: { description: "Application not found" },
-    ...ADMIN_ERRORS,
+    ...ADMIN_CONSULTANT_ERRORS,
   },
 });
 router.delete(
   "/:id",
   requireAuth,
-  requireRole("admin"),
+  requireRole("admin", "consultant"),
   validateParams(uuidParamSchema),
   applicationsController.softDeleteById,
 );
