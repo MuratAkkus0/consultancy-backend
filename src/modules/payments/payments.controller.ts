@@ -7,12 +7,17 @@ import type {
   PaymentQuery,
   RevenueQuery,
 } from "./payments.types.js";
+import {
+  notifyPaymentCreated,
+  notifyPaymentUpdated,
+} from "../notifications/push.notifications.js";
 
 export const paymentsController = {
   create: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const data = req.body as unknown as CreatePaymentDTO;
       const payment = await paymentsService.create(data, req.user!.id);
+      if (payment) notifyPaymentCreated(payment);
       res.status(201).json(payment);
     } catch (err) {
       next(err);
@@ -57,6 +62,8 @@ export const paymentsController = {
       const { id } = req.params as unknown as UuidParam;
       const data = req.body as unknown as EditPaymentDTO;
       const payment = await paymentsService.editById(id, data);
+      // The service fills in the derived status, so read it after the call.
+      notifyPaymentUpdated(payment, data.status === "paid");
       res.json(payment);
     } catch (err) {
       next(err);

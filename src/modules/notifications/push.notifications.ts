@@ -1,5 +1,11 @@
 import { and, eq, inArray, isNull, notInArray, or } from "drizzle-orm";
-import { conversationsTable, db, users } from "../../db/index.js";
+import {
+  conversationsTable,
+  coursesTable,
+  db,
+  studentCoursesTable,
+  users,
+} from "../../db/index.js";
 import {
   isPushConfigured,
   sendPushToUsers,
@@ -15,6 +21,8 @@ export const PUSH_URLS = {
   applications: "/dashboard",
   appointments: "/dashboard",
   documents: "/dashboard",
+  payments: "/dashboard",
+  courses: "/dashboard",
 } as const;
 
 const NON_NOTIFIABLE_STATUSES = ["soft_deleted", "deleted"] as const;
@@ -151,5 +159,147 @@ export const notifyAppointmentCancelled = (appointment: {
       body: "Planlanan randevunuz iptal edildi.",
       url: PUSH_URLS.appointments,
       tag: `appointment:${appointment.id}`,
+    }),
+  );
+
+export const notifyPaymentCreated = (payment: {
+  id: string;
+  studentId: string;
+}): void =>
+  dispatch("payment created", () =>
+    sendToActiveUsers([payment.studentId], {
+      title: "Yeni bir ödeme kaydınız var",
+      body: "Hesabınıza yeni bir ödeme kaydı eklendi.",
+      url: PUSH_URLS.payments,
+      tag: `payment:${payment.id}`,
+    }),
+  );
+
+export const notifyPaymentUpdated = (
+  payment: { id: string; studentId: string; status: string },
+  becamePaid: boolean,
+): void =>
+  dispatch("payment updated", () =>
+    sendToActiveUsers(
+      [payment.studentId],
+      becamePaid
+        ? {
+            title: "Ödemeniz onaylandı",
+            body: "Ödemeniz alındı olarak işaretlendi.",
+            url: PUSH_URLS.payments,
+            tag: `payment:${payment.id}`,
+          }
+        : {
+            title: "Ödeme kaydınızda güncelleme var",
+            body: "Ödeme kaydınızla ilgili yeni bir güncelleme yapıldı.",
+            url: PUSH_URLS.payments,
+            tag: `payment:${payment.id}`,
+          },
+    ),
+  );
+
+export const notifyDocumentRequested = (requirement: {
+  id: string;
+  studentId: string;
+}): void =>
+  dispatch("document requested", () =>
+    sendToActiveUsers([requirement.studentId], {
+      title: "Sizden yeni bir evrak istendi",
+      body: "Danışmanınız sizden yeni bir evrak yüklemenizi istedi.",
+      url: PUSH_URLS.documents,
+      tag: `required-document:${requirement.id}`,
+    }),
+  );
+
+const loadEnrolledStudentIds = async (courseId: string): Promise<string[]> => {
+  const rows = await db
+    .select({ studentId: studentCoursesTable.studentId })
+    .from(studentCoursesTable)
+    .where(
+      and(
+        eq(studentCoursesTable.courseId, courseId),
+        isNull(studentCoursesTable.deletedAt),
+      ),
+    );
+  return rows.map((row) => row.studentId);
+};
+
+export const notifyCourseEnrolled = (enrollment: {
+  courseId: string;
+  studentId: string;
+}): void =>
+  dispatch("course enrolled", async () => {
+    const course = await db.query.coursesTable.findFirst({
+      where: eq(coursesTable.id, enrollment.courseId),
+      columns: { courseName: true },
+    });
+    if (!course) return;
+
+    await sendToActiveUsers([enrollment.studentId], {
+      title: "Yeni bir kursa kaydedildiniz",
+      body: `"${course.courseName}" kursuna kaydınız yapıldı.`,
+      url: PUSH_URLS.courses,
+      tag: `course:${enrollment.courseId}`,
+    });
+  });
+
+export const notifyCourseUnenrolled = (enrollment: {
+  courseId: string;
+  studentId: string;
+}): void =>
+  dispatch("course unenrolled", async () => {
+    const course = await db.query.coursesTable.findFirst({
+      where: eq(coursesTable.id, enrollment.courseId),
+      columns: { courseName: true },
+    });
+    if (!course) return;
+
+    await sendToActiveUsers([enrollment.studentId], {
+      title: "Kurs kaydınız kaldırıldı",
+      body: `"${course.courseName}" kursundaki kaydınız kaldırıldı.`,
+      url: PUSH_URLS.courses,
+      tag: `course:${enrollment.courseId}`,
+    });
+  });
+
+export const notifyCourseUpdated = (course: {
+  id: string;
+  courseName: string;
+}): void =>
+  dispatch("course updated", async () => {
+    await sendToActiveUsers(await loadEnrolledStudentIds(course.id), {
+      title: "Kursunuzda güncelleme var",
+      body: `"${course.courseName}" kursunda bir güncelleme yapıldı.`,
+      url: PUSH_URLS.courses,
+      tag: `course:${course.id}`,
+    });
+  });
+
+// Enrollments are left untouched by a soft delete, so the enrolled students
+// can still be found after the course row is marked deleted.
+export const notifyCourseCancelled = (course: {
+  id: string;
+  courseName: string;
+}): void =>
+  dispatch("course cancelled", async () => {
+    await sendToActiveUsers(await loadEnrolledStudentIds(course.id), {
+      title: "Kursunuz iptal edildi",
+      body: `"${course.courseName}" kursu iptal edildi.`,
+      url: PUSH_URLS.courses,
+      tag: `course:${course.id}`,
+    });
+  });
+
+export const notifyCourseAssignedToConsultant = (course: {
+  id: string;
+  courseName: string;
+  consultantId: string;
+}): void =>
+  dispatch("course assigned", () =>
+    sendToActiveUsers([course.consultantId], {
+      title: "Size yeni bir kurs atandı",
+      body: `"${course.courseName}" kursu size atandı.`,
+      url: PUSH_URLS.courses,
+      tag: `course:${course.id}`,
     }),
   );

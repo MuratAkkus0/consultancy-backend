@@ -8,6 +8,7 @@ import type {
   CreateRequiredDocumentDTO,
   RequiredDocumentQuery,
 } from "./required_documents.types.js";
+import { notifyDocumentRequested } from "../notifications/push.notifications.js";
 
 export const requiredDocumentsController = {
   create: async (req: Request, res: Response, next: NextFunction) => {
@@ -24,6 +25,8 @@ export const requiredDocumentsController = {
           data,
         );
       }
+
+      if (requirement) notifyDocumentRequested(requirement);
 
       res.status(201).json(requirement);
     } catch (err) {

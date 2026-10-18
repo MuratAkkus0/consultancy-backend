@@ -10,12 +10,36 @@ import type {
   EnrollStudentDTO,
 } from "./courses.types.js";
 import type { User } from "../../db/types.js";
+import {
+  notifyCourseAssignedToConsultant,
+  notifyCourseCancelled,
+  notifyCourseEnrolled,
+  notifyCourseUnenrolled,
+  notifyCourseUpdated,
+} from "../notifications/push.notifications.js";
+
+// Fields enrolled students see; consultantNotes and consultantId are not.
+const STUDENT_VISIBLE_COURSE_FIELDS = [
+  "courseName",
+  "courseDescription",
+  "startDate",
+  "endDate",
+  "schedule",
+  "level",
+  "meetingLink",
+] as const;
 
 export const coursesController = {
   create: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const data = req.body as unknown as CreateCourseDTO;
       const course = await coursesService.create(data);
+      if (course?.consultantId) {
+        notifyCourseAssignedToConsultant({
+          ...course,
+          consultantId: course.consultantId,
+        });
+      }
       res.status(201).json(course);
     } catch (err) {
       next(err);
@@ -76,6 +100,20 @@ export const coursesController = {
         course = await coursesService.editByIdForConsultant(id, user.id, data);
       }
 
+      if (course) {
+        const touchesStudentVisibleFields = STUDENT_VISIBLE_COURSE_FIELDS.some(
+          (field) => field in data,
+        );
+        if (touchesStudentVisibleFields) notifyCourseUpdated(course);
+
+        if ("consultantId" in data && course.consultantId) {
+          notifyCourseAssignedToConsultant({
+            ...course,
+            consultantId: course.consultantId,
+          });
+        }
+      }
+
       res.json(course);
     } catch (err) {
       next(err);
@@ -86,6 +124,7 @@ export const coursesController = {
     try {
       const { id } = req.params as unknown as UuidParam;
       const course = await coursesService.softDeleteById(id);
+      notifyCourseCancelled(course);
       res.json(course);
     } catch (err) {
       next(err);
@@ -107,6 +146,7 @@ export const coursesController = {
       const { id } = req.params as unknown as UuidParam;
       const { studentId } = req.body as unknown as EnrollStudentDTO;
       const enrollment = await coursesService.enrollStudent(id, studentId);
+      if (enrollment) notifyCourseEnrolled(enrollment);
       res.status(201).json(enrollment);
     } catch (err) {
       if (isUniqueViolation(err)) {
@@ -125,6 +165,7 @@ export const coursesController = {
         studentId: string;
       };
       const enrollment = await coursesService.unenrollStudent(id, studentId);
+      notifyCourseUnenrolled(enrollment);
       res.json(enrollment);
     } catch (err) {
       next(err);
