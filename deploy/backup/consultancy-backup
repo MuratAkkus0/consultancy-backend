@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+#
+# Nightly backup of every stateful thing on this host.
+#
+# Encryption is asymmetric on purpose: only the age RECIPIENT (public key) is
+# present here, so this machine can create backups but cannot read them back.
+# A compromised server therefore cannot decrypt its own history.
+set -euo pipefail
+
+CONF=/etc/consultancy-backup/config
+RECIPIENT=/etc/consultancy-backup/age-recipient.txt
+
+# shellcheck source=/dev/null
+. "$CONF"
+[ -s "$RECIPIENT" ] || { echo "age recipient file is missing or empty: $RECIPIENT" >&2; exit 1; }
+case "$B2_REMOTE" in *CHANGE-ME*) echo "B2_REMOTE is not configured in $CONF" >&2; exit 1;; esac
+
+STAMP="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+chmod 700 "$WORK"
+
+log() { echo "[$(date -u +%H:%M:%S)] $*"; }
+
+# --- databases --------------------------------------------------------------
+for db in consultancy consultancy_cms; do
+  log "dumping $db"
+  # pipefail makes a failing pg_dump fail the whole pipeline instead of
+  # silently producing a truncated, encrypted, useless file.
+  sudo -u postgres pg_dump -Fc "$db" | age -R "$RECIPIENT" > "$WORK/$db.dump.age"
+done
+
+# --- uploaded media ---------------------------------------------------------
+log "archiving cms uploads"
+tar czf - -C /srv/consultancy-cms/shared uploads | age -R "$RECIPIENT" > "$WORK/cms-uploads.tar.gz.age"
+
+# --- env files --------------------------------------------------------------
+# Rebuilding this host from scratch needs the secrets too, and they are only
+# ever written here in encrypted form.
+log "archiving env files"
+tar czf - \
+  -C /srv consultancy-backend/shared/.env consultancy-frontend/shared/.env consultancy-cms/shared/.env \
+  | age -R "$RECIPIENT" > "$WORK/env-files.tar.gz.age"
+
+# --- upload -----------------------------------------------------------------
+log "uploading to $B2_REMOTE/$STAMP"
+rclone copy "$WORK" "$B2_REMOTE/$STAMP/" --config /root/.config/rclone/rclone.conf
+
+log "uploaded:"
+rclone lsl "$B2_REMOTE/$STAMP/" --config /root/.config/rclone/rclone.conf | sed 's/^/  /'
+
+# Fail loudly if the upload silently produced nothing.
+count="$(rclone lsf "$B2_REMOTE/$STAMP/" --config /root/.config/rclone/rclone.conf | wc -l)"
+[ "$count" -eq 4 ] || { echo "expected 4 files in the remote snapshot, found $count" >&2; exit 1; }
+
+# --- prune ------------------------------------------------------------------
+log "pruning snapshots older than ${KEEP_DAYS}d"
+rclone delete --min-age "${KEEP_DAYS}d" "$B2_REMOTE" --config /root/.config/rclone/rclone.conf
+rclone rmdirs --leave-root "$B2_REMOTE" --config /root/.config/rclone/rclone.conf 2>/dev/null || true
+
+log "backup ok: $STAMP"

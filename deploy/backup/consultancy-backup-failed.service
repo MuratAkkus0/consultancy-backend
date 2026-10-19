@@ -1,0 +1,8 @@
+[Unit]
+Description=Record that the backup failed
+
+[Service]
+Type=oneshot
+# Replace with a real notification (mail, Telegram, healthchecks.io ping) once
+# a channel exists. Until then the marker file is what a human can check.
+ExecStart=/bin/sh -c 'date -u +"%%Y-%%m-%%dT%%H:%%M:%%SZ backup FAILED" >> /var/log/consultancy-backup-failures.log'

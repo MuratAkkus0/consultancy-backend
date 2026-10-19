@@ -1,0 +1,11 @@
+[Unit]
+Description=Nightly encrypted offsite backup
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+# Survive a host that was powered off at 03:30 instead of skipping the run.
+Persistent=true
+RandomizedDelaySec=15m
+
+[Install]
+WantedBy=timers.target

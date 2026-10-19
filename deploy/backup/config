@@ -1,0 +1,5 @@
+# Installed to /etc/consultancy-backup/config by install.sh. Not secret: the
+# credentials live in /root/.config/rclone/rclone.conf.
+# Keep a dedicated prefix: the prune step deletes everything under it.
+B2_REMOTE="b2:campus69-backups/vps"
+KEEP_DAYS=14

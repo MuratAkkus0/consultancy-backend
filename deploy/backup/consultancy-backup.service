@@ -1,0 +1,10 @@
+[Unit]
+Description=Encrypted offsite backup of databases, media and env files
+After=network-online.target postgresql.service
+Wants=network-online.target
+# A failed backup is silent otherwise: nothing watches a oneshot unit.
+OnFailure=consultancy-backup-failed.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/consultancy-backup
