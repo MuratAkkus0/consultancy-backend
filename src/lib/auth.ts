@@ -8,6 +8,9 @@ import { users } from "../db/index.js";
 import { sendMail } from "./email/mailer.js";
 import { resetPasswordEmail, verifyEmail } from "./email/templates.js";
 import { config } from "../config/config.js";
+import { logger } from "./logger.js";
+
+const log = logger.child({ module: "auth" });
 
 export const auth = betterAuth({
   experimental: { joins: true },
@@ -18,8 +21,12 @@ export const auth = betterAuth({
     provider: "pg",
     usePlural: true,
   }),
+  // better-auth hands over everything; LOG_LEVEL decides what is written.
   logger: {
     level: "debug",
+    log: (level, message, ...args) => {
+      log[level]({ args }, message);
+    },
   },
   advanced: {
     database: { generateId: () => randomUUID() },
@@ -38,7 +45,7 @@ export const auth = betterAuth({
         const mail = resetPasswordEmail({ url, name: user.name });
         await sendMail({ to: user.email, ...mail });
       } catch (err) {
-        console.error("[auth] failed to send reset-password email:", err);
+        log.error({ err }, "failed to send reset-password email");
       }
     },
   },
@@ -65,7 +72,7 @@ export const auth = betterAuth({
         });
         await sendMail({ to: user.email, ...mail });
       } catch (err) {
-        console.error("[auth] failed to send verification email:", err);
+        log.error({ err }, "failed to send verification email");
       }
     },
   },
@@ -102,9 +109,10 @@ export const auth = betterAuth({
   },
   onAPIError: {
     throw: true,
+    // Most of these are client mistakes (bad password, expired link); real
+    // failures still reach the express error handler through the rethrow.
     onError: (error) => {
-      // Custom error handling
-      console.error("Auth error:", error);
+      log.warn({ err: error }, "auth api error");
     },
     errorURL: "/auth/error",
     customizeDefaultErrorPage: {

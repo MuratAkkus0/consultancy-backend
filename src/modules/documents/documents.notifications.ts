@@ -26,6 +26,9 @@ import {
   documentUploadedForStudentEmail,
 } from "../../lib/email/templates.js";
 import type { ReviewDocumentDTO } from "./documents.types.js";
+import { logger } from "../../lib/logger.js";
+
+const log = logger.child({ module: "documents.notifications" });
 
 const dashboardUrl = `${env.APP_WEB_URL}/dashboard`;
 
@@ -102,8 +105,8 @@ const deliver = async (
 const dispatch = (label: string, task: () => Promise<void>): void => {
   if (!isEmailConfigured && !isPushConfigured) return;
 
-  void task().catch((error: unknown) => {
-    console.error(`[documents.notifications] ${label} gönderilemedi:`, error);
+  void task().catch((err: unknown) => {
+    log.error({ err, notification: label }, "notification could not be sent");
   });
 };
 

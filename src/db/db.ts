@@ -4,6 +4,9 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "./schema/index.js";
 import { config } from "../config/index.js";
 import fs from "fs";
+import { logger } from "../lib/logger.js";
+
+const log = logger.child({ module: "db" });
 
 const pool = new Pool({
   connectionString: config.db.url,
@@ -26,13 +29,16 @@ const pool = new Pool({
 
 // Connection error
 pool.on("error", (err) => {
-  console.error("Unexpected error on idle pg client", err);
+  log.error({ err }, "unexpected error on idle pg client");
 });
 
 export const db = drizzle(pool, {
   schema,
   casing: "snake_case",
-  logger: config.isDev,
+  // Dev only: query params hold user data and password hashes.
+  logger: config.isDev && {
+    logQuery: (query, params) => log.debug({ params }, query),
+  },
 });
 
 export type Database = typeof db;

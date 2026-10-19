@@ -1,5 +1,8 @@
 import nodemailer, { type Transporter } from "nodemailer";
 import { env } from "../../config/env.js";
+import { logger } from "../logger.js";
+
+const log = logger.child({ module: "mailer" });
 
 export const isEmailConfigured = Boolean(
   env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS && env.SMTP_FROM,
@@ -38,13 +41,13 @@ export const sendMail = async (options: MailOptions): Promise<void> => {
 
 export const verifyMailer = async () => {
   if (!isEmailConfigured) {
-    console.warn("[mailer] SMTP not configured - emails are disabled.");
+    log.warn("SMTP not configured - emails are disabled");
     return;
   }
   try {
     await getTransporter().verify();
-    console.log("[mailer] SMTP connection verified.");
+    log.info("SMTP connection verified");
   } catch (err) {
-    console.error("[mailer] SMTP verification failed:", err);
+    log.error({ err }, "SMTP verification failed");
   }
 };

@@ -12,6 +12,9 @@ import {
   type PushOptions,
   type PushPayload,
 } from "../../lib/push.js";
+import { logger } from "../../lib/logger.js";
+
+const log = logger.child({ module: "push.notifications" });
 
 // Payload urls are relative paths; the service worker opens them on the
 // app's own origin. Every section opens the dashboard root for now, until the
@@ -30,8 +33,8 @@ const NON_NOTIFIABLE_STATUSES = ["soft_deleted", "deleted"] as const;
 const dispatch = (label: string, task: () => Promise<void>): void => {
   if (!isPushConfigured) return;
 
-  void task().catch((error: unknown) => {
-    console.error(`[push.notifications] ${label} could not be sent:`, error);
+  void task().catch((err: unknown) => {
+    log.error({ err, notification: label }, "notification could not be sent");
   });
 };
 

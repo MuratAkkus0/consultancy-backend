@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 const payload = {
   title: "Yeni mesajınız var",
@@ -15,9 +15,16 @@ const subscription = {
   auth: "auth-key",
 };
 
+const mockLogger = () => {
+  const log = { warn: vi.fn(), error: vi.fn() };
+  vi.doMock("./logger.js", () => ({ logger: { child: () => log } }));
+  return log;
+};
+
 const loadPush = async (vapid: Record<string, string | undefined>) => {
   vi.resetModules();
 
+  const log = mockLogger();
   const sendNotification = vi.fn();
   const setVapidDetails = vi.fn();
   const deleteWhere = vi.fn(() => Promise.resolve());
@@ -39,7 +46,14 @@ const loadPush = async (vapid: Record<string, string | undefined>) => {
   }));
 
   const push = await import("./push.js");
-  return { push, sendNotification, setVapidDetails, deleteWhere, selectWhere };
+  return {
+    push,
+    log,
+    sendNotification,
+    setVapidDetails,
+    deleteWhere,
+    selectWhere,
+  };
 };
 
 const configured = {
@@ -49,13 +63,9 @@ const configured = {
 };
 
 describe("push", () => {
-  beforeEach(() => {
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
-  });
-
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.doUnmock("./logger.js");
     vi.doUnmock("web-push");
     vi.doUnmock("../config/env.js");
     vi.doUnmock("../db/index.js");
@@ -73,6 +83,7 @@ describe("push", () => {
 
   it("stays disabled when the VAPID keys are invalid", async () => {
     vi.resetModules();
+    const log = mockLogger();
     const setVapidDetails = vi.fn(() => {
       throw new Error("bad key");
     });
@@ -88,6 +99,7 @@ describe("push", () => {
     const push = await import("./push.js");
 
     expect(push.isPushConfigured).toBe(false);
+    expect(log.error).toHaveBeenCalled();
   });
 
   it("sends the JSON payload with a TTL and urgency", async () => {
@@ -124,7 +136,8 @@ describe("push", () => {
   );
 
   it("logs other errors without deleting or throwing", async () => {
-    const { push, sendNotification, deleteWhere } = await loadPush(configured);
+    const { push, log, sendNotification, deleteWhere } =
+      await loadPush(configured);
     sendNotification.mockRejectedValue(
       Object.assign(new Error("server error"), { statusCode: 500 }),
     );
@@ -134,18 +147,18 @@ describe("push", () => {
     ).resolves.toBeUndefined();
 
     expect(deleteWhere).not.toHaveBeenCalled();
-    expect(console.error).toHaveBeenCalled();
+    expect(log.error).toHaveBeenCalled();
   });
 
   it("never throws when loading subscriptions fails", async () => {
-    const { push, selectWhere } = await loadPush(configured);
+    const { push, log, selectWhere } = await loadPush(configured);
     selectWhere.mockRejectedValue(new Error("db down"));
 
     await expect(
       push.sendPushToUser("user-1", payload),
     ).resolves.toBeUndefined();
 
-    expect(console.error).toHaveBeenCalled();
+    expect(log.error).toHaveBeenCalled();
   });
 
   it("skips the lookup for an empty recipient list", async () => {

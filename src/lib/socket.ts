@@ -12,6 +12,9 @@ import type {
 import { registerConversationsSocket } from "../modules/conversations/conversations.socket.js";
 import { createClient } from "redis";
 import { createAdapter } from "@socket.io/redis-adapter";
+import { logger } from "./logger.js";
+
+const log = logger.child({ module: "socket" });
 
 let io: AppSocketServer | undefined;
 
@@ -37,12 +40,12 @@ export const initSocket = async (server: HttpServer) => {
 
   redisSubClient = redisPubClient.duplicate();
 
-  redisPubClient.on("error", (error) => {
-    console.error("[redis:pub]", error);
+  redisPubClient.on("error", (err) => {
+    log.error({ err, client: "pub" }, "redis client error");
   });
 
-  redisSubClient.on("error", (error) => {
-    console.error("[redis:sub]", error);
+  redisSubClient.on("error", (err) => {
+    log.error({ err, client: "sub" }, "redis client error");
   });
 
   await Promise.all([redisPubClient.connect(), redisSubClient.connect()]);

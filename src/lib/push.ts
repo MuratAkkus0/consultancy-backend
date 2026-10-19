@@ -2,6 +2,9 @@ import webpush from "web-push";
 import { eq, inArray } from "drizzle-orm";
 import { env } from "../config/env.js";
 import { db, pushSubscriptionsTable } from "../db/index.js";
+import { logger } from "./logger.js";
+
+const log = logger.child({ module: "push" });
 
 // Never put user-authored or sensitive content (message text, document names,
 // notes) in a payload: it passes through third-party push services.
@@ -23,17 +26,14 @@ const TTL_SECONDS = 24 * 60 * 60;
 const initVapid = (): boolean => {
   const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = env;
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY || !VAPID_SUBJECT) {
-    console.warn("[push] VAPID keys not configured - push is disabled.");
+    log.warn("VAPID keys not configured - push is disabled");
     return false;
   }
   try {
     webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
     return true;
   } catch (err) {
-    console.error(
-      "[push] Invalid VAPID configuration - push is disabled:",
-      err,
-    );
+    log.error({ err }, "invalid VAPID configuration - push is disabled");
     return false;
   }
 };
@@ -69,10 +69,7 @@ const sendToSubscription = async (
         .delete(pushSubscriptionsTable)
         .where(eq(pushSubscriptionsTable.id, subscription.id))
         .catch((deleteErr: unknown) => {
-          console.error(
-            "[push] failed to remove expired subscription:",
-            deleteErr,
-          );
+          log.error({ err: deleteErr }, "failed to remove expired subscription");
         });
       return;
     }
@@ -81,9 +78,12 @@ const sendToSubscription = async (
       typeof err === "object" && err !== null && "statusCode" in err
         ? err.statusCode
         : undefined;
-    console.error(
-      `[push] failed to send notification (status ${String(statusCode)}):`,
-      err instanceof Error ? err.message : "unknown error",
+    log.error(
+      {
+        statusCode,
+        reason: err instanceof Error ? err.message : "unknown error",
+      },
+      "failed to send notification",
     );
   }
 };
@@ -109,7 +109,7 @@ export const sendPushToUsers = async (
       ),
     );
   } catch (err) {
-    console.error("[push] failed to dispatch notifications:", err);
+    log.error({ err }, "failed to dispatch notifications");
   }
 };
 

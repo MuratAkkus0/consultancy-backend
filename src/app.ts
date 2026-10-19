@@ -30,6 +30,7 @@ import { z } from "zod";
 import { buildOpenApiDocument } from "./swagger.js";
 import { registerRoute } from "./lib/openapi.js";
 import { apiLimiter, authLimiter } from "./middleware/rate-limit.middleware.js";
+import { requestLogger } from "./middleware/request-logger.middleware.js";
 
 const app = express();
 
@@ -38,10 +39,15 @@ app.use(
     origin: env.ALLOWED_ORIGINS,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
+    // Lets the web app read the id and show it in its error UI.
+    exposedHeaders: ["X-Request-Id"],
   }),
 );
 
 app.set("trust proxy", env.TRUSTED_PROXY_HOPS);
+
+// After cors, so answered preflights stay out of the log.
+app.use(requestLogger);
 
 const authHandler = toNodeHandler(auth);
 app.use("/api/auth/sign-in", authLimiter);
@@ -53,12 +59,9 @@ app.post("/api/auth/update-user", (_req, _res) => {
 });
 
 app.all("/api/auth/*splat", async (req, res, next) => {
-  console.log(`[AUTH-IN]  ${req.method} ${req.url}`);
   try {
     await authHandler(req, res);
-    console.log(`[AUTH-OUT] ${req.method} ${req.url} -> ${res.statusCode}`);
   } catch (err) {
-    console.error(`[AUTH-ERR] ${req.method} ${req.url}`);
     next(err);
   }
 });
@@ -141,19 +144,26 @@ app.use((_req, res) => {
 });
 
 // Error Handler
-app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  if (createHttpError.isHttpError(err)) {
+app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
+  const status = createHttpError.isHttpError(err) ? err.status : 500;
+
+  if (status >= 500) {
+    // pino-http writes this, stack included, on the request's completion line.
+    res.err = err instanceof Error ? err : new Error(String(err));
+  }
+
+  if (res.headersSent) return;
+
+  if (createHttpError.isHttpError(err) && err.expose) {
     const issues: unknown = err.issues;
-    return res.status(err.status).json({
-      error: err.expose ? err.message : "Internal server error",
-      ...(err.expose && issues ? { issues } : {}),
+    return res.status(status).json({
+      error: err.message,
+      ...(issues ? { issues } : {}),
     });
   }
 
-  console.error("[EXPRESS-ERR]", err);
-  if (!res.headersSent) {
-    res.status(500).json({ error: "Internal server error" });
-  }
+  // The id is what a user can report back to find this exact failure in the log.
+  res.status(status).json({ error: "Internal server error", requestId: req.id });
 });
 
 export { app };
